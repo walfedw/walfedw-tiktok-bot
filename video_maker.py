@@ -1,18 +1,36 @@
 import asyncio
 import textwrap
+import re
 import edge_tts
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import ImageClip, AudioFileClip
 
-# Voz en español latino masculina
-VOZ_LATINA = "es-MX-DarianNeural"
+# Voces en español latino/castellano de respaldo
+VOCES = ["es-MX-DarianNeural", "es-MX-JorgeNeural", "es-ES-AlvaroNeural"]
+
+def limpiar_texto(texto):
+    # Eliminar símbolos extraños o comillas que puedan bloquear a edge-tts
+    texto_limpio = re.sub(r'[^\w\s.,¡!¿?@#\-áéíóúÁÉÍÓÚñÑ]', '', texto)
+    return texto_limpio.strip()
 
 async def generar_audio(texto, archivo_salida="voz.mp3"):
-    communicate = edge_tts.Communicate(texto, VOZ_LATINA)
-    await communicate.save(archivo_salida)
+    texto_procesar = limpiar_texto(texto)
+    if not texto_procesar:
+        texto_procesar = "Servicio técnico y mantenimiento profesional para consolas PlayStation y Nintendo Switch en Walfedw."
+
+    for voz in VOCES:
+        try:
+            print(f"Generando voz en off con: {voz}...")
+            communicate = edge_tts.Communicate(texto_procesar, voz)
+            await communicate.save(archivo_salida)
+            print("¡Audio generado exitosamente!")
+            return
+        except Exception as e:
+            print(f"Advertencia con voz {voz}: {e}")
+
+    raise RuntimeError("No se pudo generar el audio con ninguna voz disponible.")
 
 def crear_imagen_pantalla(titulo, guion_resumen, ancho=720, alto=1280):
-    # Fondo azul oscuro estilizado
     img = Image.new('RGB', (ancho, alto), color=(15, 23, 42))
     draw = ImageDraw.Draw(img)
 
@@ -23,7 +41,7 @@ def crear_imagen_pantalla(titulo, guion_resumen, ancho=720, alto=1280):
     except:
         font_marca = font_titulo = font_texto = ImageFont.load_default()
 
-    # Encabezado con tu marca
+    # Encabezado con marca
     draw.text((ancho // 2, 120), "@walfedw", fill=(0, 210, 255), anchor="mm", font=font_marca)
     draw.text((ancho // 2, 170), "SERVICIO TÉCNICO DE CONSOLAS", fill=(255, 200, 0), anchor="mm", font=font_texto)
 
@@ -34,14 +52,14 @@ def crear_imagen_pantalla(titulo, guion_resumen, ancho=720, alto=1280):
         draw.text((ancho // 2, y_pos), linea, fill=(255, 255, 255), anchor="mm", font=font_titulo)
         y_pos += 42
 
-    # Texto descriptivo/resumen
+    # Texto descriptivo
     lineas_guion = textwrap.wrap(guion_resumen[:220] + "...", width=34)
     y_pos = y_pos + 60
     for linea in lineas_guion:
         draw.text((ancho // 2, y_pos), linea, fill=(210, 220, 240), anchor="mm", font=font_texto)
         y_pos += 36
 
-    # Pie de página (Call to Action)
+    # Pie de página (CTA)
     draw.rectangle([40, 1080, 680, 1180], fill=(30, 41, 59), outline=(0, 210, 255), width=2)
     draw.text((ancho // 2, 1115), "PS3 • PS4 • PS5 • SWITCH", fill=(255, 255, 255), anchor="mm", font=font_marca)
     draw.text((ancho // 2, 1150), "¡Escríbenos para mantenimiento!", fill=(0, 210, 255), anchor="mm", font=font_texto)
