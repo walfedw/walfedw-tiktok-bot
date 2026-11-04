@@ -1,15 +1,15 @@
 import os
 import json
-from google import genai
+import google.generativeai as genai
 
 def generar_guion(noticias):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("Error: No se encontró la variable GEMINI_API_KEY")
 
-    client = genai.Client(api_key=api_key)
+    # Configurar la API oficial de Google AI Studio
+    genai.configure(api_key=api_key)
 
-    # Convertir las noticias a texto para el prompt
     texto_noticias = "\n".join([f"- {n['titulo']}: {n['resumen']}" for n in noticias[:10]])
 
     prompt = f"""
@@ -36,12 +36,9 @@ def generar_guion(noticias):
     }}
     """
 
-    response = client.models.generate_content(
-        model='gemini-1.5-flash',
-        contents=prompt
-    )
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    response = model.generate_content(prompt)
 
-    # Limpiar respuesta por si Gemini devuelve formato markdown
     texto_respuesta = response.text.strip()
     if texto_respuesta.startswith("```json"):
         texto_respuesta = texto_respuesta[7:-3].strip()
