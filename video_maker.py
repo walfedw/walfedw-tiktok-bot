@@ -25,10 +25,25 @@ FALLBACK_IMAGES = [
 def limpiar_texto(texto):
     return re.sub(r'[^\w\s.,¡!¿?@#\-áéíóúÁÉÍÓÚñÑ]', '', texto).strip()
 
+def cargar_logo_base64():
+    """Carga walfedw.jpg o logo.png del repositorio para insertarlo como avatar circular neón."""
+    posibles_nombres = ["walfedw.jpg", "walfedw.png", "logo.jpg", "logo.png"]
+    for nombre in posibles_nombres:
+        if os.path.exists(nombre):
+            try:
+                with open(nombre, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode("utf-8")
+                    mime = "image/png" if nombre.endswith(".png") else "image/jpeg"
+                    print(f"Logo cargado exitosamente desde: {nombre}")
+                    return f"data:{mime};base64,{b64}"
+            except Exception as e:
+                print(f"Error al procesar logo {nombre}: {e}")
+    return ""
+
 async def generar_audio(texto, archivo_salida):
     texto_procesar = limpiar_texto(texto)
     if not texto_procesar:
-        texto_procesar = "Consola flasheada y servicio técnico profesional en Walfedw."
+        texto_procesar = "Consola flasheada, catálogo de juegos y software profesional en Walfedw."
 
     for voz in VOCES:
         try:
@@ -58,13 +73,13 @@ def obtener_imagen_base64(nombre_juego, idx_escena=0):
             data = res.json()
             if data.get("results") and data["results"][0].get("background_image"):
                 img_url = data["results"][0]["background_image"]
-                print(f"[RAWG OK] Imagen encontrada para: {busqueda_limpia}")
+                print(f"[RAWG OK] Imagen oficial encontrada para: {busqueda_limpia}")
                 return descargar_bytes_a_base64(img_url)
     except Exception as e:
         print(f"[RAWG Error] {e}")
 
     fallback_url = FALLBACK_IMAGES[idx_escena % len(FALLBACK_IMAGES)]
-    print(f"[Fallback] Imagen genérica para escena #{idx_escena}")
+    print(f"[Fallback] Fondo genérico para escena #{idx_escena}")
     return descargar_bytes_a_base64(fallback_url)
 
 def descargar_musica_fondo():
@@ -82,6 +97,12 @@ def descargar_musica_fondo():
     return None
 
 def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, b64_img, nombre_salida_html):
+    logo_b64 = cargar_logo_base64()
+    
+    avatar_html = ""
+    if logo_b64:
+        avatar_html = f"<img src='{logo_b64}' class='brand-avatar' />"
+        
     html_content = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -118,19 +139,31 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
             justify-content: space-between;
         }}
         .header {{
-            background: rgba(15, 23, 42, 0.88);
+            background: rgba(15, 23, 42, 0.90);
             border: 2px solid #00d2ff;
             border-radius: 20px;
-            padding: 16px;
-            text-align: center;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
             box-shadow: 0 0 25px rgba(0, 210, 255, 0.5);
             backdrop-filter: blur(12px);
         }}
-        .brand {{ font-size: 36px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; }}
-        .sub-brand {{ font-size: 18px; color: #ffc800; font-weight: 700; margin-top: 4px; }}
+        .brand-avatar {{
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            border: 2px solid #00d2ff;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.8);
+            object-fit: cover;
+        }}
+        .header-info {{ text-align: left; }}
+        .brand {{ font-size: 34px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; line-height: 1; }}
+        .sub-brand {{ font-size: 16px; color: #ffc800; font-weight: 700; margin-top: 4px; letter-spacing: 1px; }}
 
         .main-card {{
-            background: rgba(15, 23, 42, 0.90);
+            background: rgba(15, 23, 42, 0.92);
             border: 2px solid #00d2ff;
             border-radius: 24px;
             padding: 28px 22px;
@@ -159,8 +192,11 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
     <div class="bg-image"></div>
     <div class="container">
         <div class="header">
-            <div class="brand">@WALFEDW</div>
-            <div class="sub-brand">CONSOLAS FLASHEADAS - JUEGOS - MANTENIMIENTO</div>
+            {avatar_html}
+            <div class="header-info">
+                <div class="brand">@WALFEDW</div>
+                <div class="sub-brand">FLASHEO • JUEGOS • SOFTWARE</div>
+            </div>
         </div>
         <div class="main-card">
             <div class="category-title">{titulo_superior}</div>
@@ -170,7 +206,7 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
         </div>
         <div class="cta-box">
             <div class="cta-title">PS3 - PS4 - PS5 - SWITCH</div>
-            <div class="cta-desc">Escribenos para Asesoria y Catalogo</div>
+            <div class="cta-desc">Escribenos para Asesoria y Catalogo de Juegos</div>
         </div>
     </div>
 </body>
