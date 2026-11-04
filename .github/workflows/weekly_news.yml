@@ -2,9 +2,8 @@ name: Publicador Semanal TikTok
 
 on:
   schedule:
-    # Se ejecuta automáticamente todos los lunes a las 14:00 UTC
     - cron: '0 14 * * 1'
-  workflow_dispatch: # Te permite ejecutarlo manualmente cuando quieras
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,7 +18,7 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Instalar FFmpeg y Fuentes tipográficas
+    - name: Instalar FFmpeg y Fuentes
       run: |
         sudo apt-get update
         sudo apt-get install -y ffmpeg fonts-dejavu
@@ -29,9 +28,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Instalar Navegador Chromium (Playwright)
+      run: |
+        playwright install chromium --with-deps
+
     - name: Ejecutar Agente de Noticias
       env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
