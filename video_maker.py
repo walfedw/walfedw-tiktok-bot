@@ -22,7 +22,7 @@ def limpiar_texto(texto):
 async def generar_audio(texto, archivo_salida="voz.mp3"):
     texto_procesar = limpiar_texto(texto)
     if not texto_procesar:
-        texto_procesar = "Flasheo, liberación, juegos y mantenimiento para consolas en Walfedw."
+        texto_procesar = "Consola flasheada, liberación, juegos y servicio técnico en Walfedw."
 
     for voz in VOCES:
         try:
@@ -41,8 +41,18 @@ def descargar_url_imagen(prompt_ingles):
     except:
         return "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=720&h=1280&fit=crop"
 
-def generar_base_html(titulo, codigo_pantalla, prompt_img):
+def generar_base_html(titulo, elementos_pantalla, prompt_img):
     url_bg = descargar_url_imagen(prompt_img)
+    
+    # Generar tarjetas dinámicas para cada elemento
+    items_html = ""
+    for idx, item in enumerate(elementos_pantalla, 1):
+        items_html += f"""
+        <div class="item-card">
+            <div class="item-badge">#{idx}</div>
+            <div class="item-text">{item}</div>
+        </div>
+        """
     
     html_lines = [
         "<!DOCTYPE html>",
@@ -50,7 +60,7 @@ def generar_base_html(titulo, codigo_pantalla, prompt_img):
         "<head>",
         "    <meta charset='UTF-8'>",
         "    <style>",
-        "        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }",
+        "        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }",
         "        body {",
         "            width: 720px;",
         "            height: 1280px;",
@@ -69,7 +79,7 @@ def generar_base_html(titulo, codigo_pantalla, prompt_img):
         f"           background-image: url('{url_bg}');",
         "            background-size: cover;",
         "            background-position: center;",
-        "            filter: blur(10px) brightness(0.30);",
+        "            filter: blur(8px) brightness(0.28);",
         "            z-index: 1;",
         "        }",
         "        .container {",
@@ -81,46 +91,60 @@ def generar_base_html(titulo, codigo_pantalla, prompt_img):
         "            justify-content: space-between;",
         "        }",
         "        .header {",
-        "            background: rgba(15, 23, 42, 0.80);",
+        "            background: rgba(15, 23, 42, 0.85);",
         "            border: 2px solid #00d2ff;",
         "            border-radius: 20px;",
-        "            padding: 18px;",
+        "            padding: 16px;",
         "            text-align: center;",
         "            box-shadow: 0 0 25px rgba(0, 210, 255, 0.4);",
         "            backdrop-filter: blur(12px);",
         "        }",
-        "        .brand { font-size: 38px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; }",
-        "        .sub-brand { font-size: 19px; color: #ffc800; font-weight: 700; margin-top: 6px; }",
+        "        .brand { font-size: 36px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; }",
+        "        .sub-brand { font-size: 18px; color: #ffc800; font-weight: 700; margin-top: 4px; }",
+        
         "        .main-card {",
         "            background: rgba(15, 23, 42, 0.85);",
         "            border: 1px solid rgba(0, 210, 255, 0.5);",
         "            border-radius: 24px;",
-        "            padding: 28px;",
+        "            padding: 24px;",
         "            box-shadow: 0 15px 35px rgba(0,0,0,0.6);",
         "            backdrop-filter: blur(15px);",
         "        }",
-        "        .title { font-size: 30px; font-weight: 800; color: #ffffff; margin-bottom: 20px; line-height: 1.3; text-transform: uppercase; }",
-        "        .code-box {",
-        "            background: #050811;",
-        "            border-left: 4px solid #00d2ff;",
-        "            border-radius: 10px;",
-        "            padding: 16px;",
-        "            font-family: 'Courier New', monospace;",
-        "            font-size: 19px;",
-        "            color: #a5f3fc;",
-        "            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);",
+        "        .title { font-size: 28px; font-weight: 900; color: #ffffff; margin-bottom: 20px; text-transform: uppercase; text-align: center; border-bottom: 2px solid #00d2ff; padding-bottom: 12px; }",
+        
+        "        .items-container { display: flex; flex-direction: column; gap: 14px; }",
+        "        .item-card {",
+        "            display: flex;",
+        "            align-items: center;",
+        "            background: rgba(30, 41, 59, 0.9);",
+        "            border: 1px solid rgba(0, 210, 255, 0.4);",
+        "            border-radius: 14px;",
+        "            padding: 14px 18px;",
+        "            box-shadow: 0 4px 15px rgba(0,0,0,0.3);",
         "        }",
-        "        .subtitles-space { height: 180px; }",
+        "        .item-badge {",
+        "            background: #00d2ff;",
+        "            color: #0b0f19;",
+        "            font-weight: 900;",
+        "            font-size: 20px;",
+        "            padding: 6px 12px;",
+        "            border-radius: 10px;",
+        "            margin-right: 15px;",
+        "        }",
+        "        .item-text { font-size: 22px; font-weight: 700; color: #f8fafc; }",
+
+        "        .subtitles-space { height: 170px; }",
+
         "        .cta-box {",
         "            background: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);",
         "            border-radius: 20px;",
-        "            padding: 20px;",
+        "            padding: 18px;",
         "            text-align: center;",
         "            color: #0b0f19;",
         "            box-shadow: 0 0 30px rgba(0, 210, 255, 0.6);",
         "        }",
-        "        .cta-title { font-size: 28px; font-weight: 900; letter-spacing: 1px; }",
-        "        .cta-desc { font-size: 19px; font-weight: 800; margin-top: 4px; opacity: 0.95; }",
+        "        .cta-title { font-size: 26px; font-weight: 900; letter-spacing: 1px; }",
+        "        .cta-desc { font-size: 18px; font-weight: 800; margin-top: 2px; opacity: 0.95; }",
         "    </style>",
         "</head>",
         "<body>",
@@ -128,15 +152,12 @@ def generar_base_html(titulo, codigo_pantalla, prompt_img):
         "    <div class='container'>",
         "        <div class='header'>",
         "            <div class='brand'>@WALFEDW</div>",
-        "            <div class='sub-brand'>FLASHEO - JUEGOS - SERVICIO TECNICO</div>",
+        "            <div class='sub-brand'>CONSOLAS FLASHEADAS - JUEGOS - MANTENIMIENTO</div>",
         "        </div>",
         "        <div class='main-card'>",
         f"           <div class='title'>{titulo}</div>",
-        "            <div class='code-box'>",
-        "                <span style='color:#f43f5e'>console_status</span> {<br>",
-        "                  <span style='color:#38bdf8'>mode</span>: <span style='color:#fde047'>\"HEN / GoldHEN\"</span>;<br>",
-        "                  <span style='color:#38bdf8'>service</span>: <span style='color:#4ade80'>\"Juegos + Mantenimiento\"</span>;<br>",
-        "                }",
+        "            <div class='items-container'>",
+        f"               {items_html}",
         "            </div>",
         "        </div>",
         "        <div class='subtitles-space'></div>",
@@ -165,7 +186,7 @@ def crear_clip_subtitulo(texto_frase, duracion_frase, ancho=720, alto=160):
     img = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    draw.rounded_rectangle([20, 10, ancho - 20, alto - 10], radius=16, fill=(10, 15, 30, 230), outline=(0, 210, 255, 255), width=2)
+    draw.rounded_rectangle([20, 10, ancho - 20, alto - 10], radius=16, fill=(10, 15, 30, 235), outline=(0, 210, 255, 255), width=2)
 
     try:
         font = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
@@ -229,12 +250,12 @@ def generar_subtitulos_dinamicos(guion_texto, duracion_total):
 
     return clips_subtitulos, archivos_temp
 
-def crear_video(guion_texto, titulo_texto, codigo_pantalla="", prompt_img="gaming console hardware", archivo_salida="noticia_tiktok.mp4"):
+def crear_video(guion_texto, titulo_texto, elementos_pantalla=[], prompt_img="gaming console hardware", archivo_salida="noticia_tiktok.mp4"):
     print("1. Generando locución...")
     asyncio.run(generar_audio(guion_texto, "voz.mp3"))
 
-    print("2. Generando render base HTML5/CSS3...")
-    generar_base_html(titulo_texto, codigo_pantalla, prompt_img)
+    print("2. Generando render de pantalla HTML5 con tarjetas de contenido...")
+    generar_base_html(titulo_texto, elementos_pantalla, prompt_img)
     renderizar_html_a_imagen()
 
     print("3. Generando subtítulos dinámicos sincronizados...")
