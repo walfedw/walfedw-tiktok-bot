@@ -15,13 +15,13 @@ def generar_guion(noticias):
     1. Si hay un tema popular sobre juegos indispensables, exploits de GoldHEN/HEN, emulación o mantenimiento, úsalo.
     2. Si los temas son vagos, genera un guion sobre: "Los mejores juegos indispensables para aprovechar tu PS4 Flasheada" o "Ventajas de flashear PS4 vs Tenerla Normal".
     3. Redacta un guion dinámico en ESPAÑOL LATINO (30-40 segundos) con un gran gancho inicial y llamado a la acción final para adquirir juegos, asesoría o mantenimiento con @walfedw.
-    4. Genera una pequeña estructura de código CSS/JSON que simule el estado de la consola para mostrarlo en pantalla.
+    4. Genera una pequeña estructura de texto informativo sobre la consola para mostrarlo en pantalla.
 
     FORMATO DE SALIDA EXACTO (JSON puro sin markdown):
     {{
         "guion": "Texto completo que dirá la voz en off",
         "titulo": "TOP JUEGOS INDISPENSABLES PS4 FLASHEADA",
-        "codigo_pantalla": ".ps4-status { status: 'HEN 11.00'; games: '50+ Loaded'; }",
+        "codigo_pantalla": "HEN 11.00 - GoldHEN Loaded",
         "hashtags": "#PS4Flasheada #JuegosPS4 #GoldHEN #NintendoSwitch #walfedw",
         "image_prompt": "ps4 console cyberpunk glowing neon background photorealistic"
     }}
@@ -50,3 +50,10 @@ def generar_guion(noticias):
             time.sleep(3)
 
     raise RuntimeError("Error al conectar con la IA tras 3 intentos.")
+
+if __name__ == "__main__":
+    from rss_reader import obtener_noticias
+    noticias_prueba = obtener_noticias()
+    if noticias_prueba:
+        resultado = generar_guion(noticias_prueba)
+        print(resultado)
