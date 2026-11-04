@@ -7,7 +7,6 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 import os
 import asyncio
 import re
-import urllib.parse
 import requests
 import edge_tts
 from playwright.sync_api import sync_playwright
@@ -19,10 +18,10 @@ VOCES = ["es-MX-DarianNeural", "es-MX-JorgeNeural", "es-ES-AlvaroNeural"]
 def limpiar_texto(texto):
     return re.sub(r'[^\w\s.,¡!¿?@#\-áéíóúÁÉÍÓÚñÑ]', '', texto).strip()
 
-async def generar_audio(texto, archivo_salida="voz.mp3"):
+async def generar_audio(texto, archivo_salida):
     texto_procesar = limpiar_texto(texto)
     if not texto_procesar:
-        texto_procesar = "Consola flasheada, liberación, juegos y servicio técnico en Walfedw."
+        texto_procesar = "Consola flasheada y servicio técnico profesional en Walfedw."
 
     for voz in VOCES:
         try:
@@ -34,16 +33,24 @@ async def generar_audio(texto, archivo_salida="voz.mp3"):
 
     raise RuntimeError("Error al generar el audio.")
 
-def descargar_url_imagen(prompt_ingles):
+def obtener_imagen_real_juego(nombre_juego):
+    """Busca y extrae la URL de la imagen HD oficial del juego en RAWG Games Database."""
     try:
-        prompt_enc = urllib.parse.quote(prompt_ingles + " 8k high quality photorealistic")
-        return f"https://image.pollinations.ai/prompt/{prompt_enc}?width=720&height=1280&nologo=true&seed=42"
-    except:
-        return "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=720&h=1280&fit=crop"
-
-def generar_html_escena(titulo_general, item_nombre, item_detalle, num_escena, prompt_img, nombre_salida_html):
-    url_bg = descargar_url_imagen(prompt_img)
+        url_api = f"https://api.rawg.io/api/games?search={requests.utils.quote(nombre_juego)}&key=c53a23720ea1477389822e6e3176477d&page_size=1"
+        res = requests.get(url_api, timeout=10)
+        if res.status_code == 200:
+            data = res.json()
+            if data.get("results") and data["results"][0].get("background_image"):
+                img_url = data["results"][0]["background_image"]
+                print(f"Imagen real encontrada para '{nombre_juego}': {img_url}")
+                return img_url
+    except Exception as e:
+        print(f"Error al buscar imagen en RAWG para {nombre_juego}: {e}")
     
+    # Imagen de respaldo de alta calidad en caso de fallo
+    return "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=1080&h=1920&fit=crop"
+
+def generar_html_escena(titulo_general, item_nombre, item_detalle, num_escena, url_bg, nombre_salida_html):
     html_lines = [
         "<!DOCTYPE html>",
         "<html lang='es'>",
@@ -69,7 +76,7 @@ def generar_html_escena(titulo_general, item_nombre, item_detalle, num_escena, p
         f"           background-image: url('{url_bg}');",
         "            background-size: cover;",
         "            background-position: center;",
-        "            filter: brightness(0.40);",
+        "            filter: brightness(0.45);",
         "            z-index: 1;",
         "        }",
         "        .container {",
@@ -86,7 +93,7 @@ def generar_html_escena(titulo_general, item_nombre, item_detalle, num_escena, p
         "            border-radius: 20px;",
         "            padding: 16px;",
         "            text-align: center;",
-        "            box-shadow: 0 0 25px rgba(0, 210, 255, 0.4);",
+        "            box-shadow: 0 0 25px rgba(0, 210, 255, 0.5);",
         "            backdrop-filter: blur(12px);",
         "        }",
         "        .brand { font-size: 36px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; }",
@@ -96,15 +103,15 @@ def generar_html_escena(titulo_general, item_nombre, item_detalle, num_escena, p
         "            background: rgba(15, 23, 42, 0.90);",
         "            border: 2px solid #00d2ff;",
         "            border-radius: 24px;",
-        "            padding: 30px 24px;",
+        "            padding: 28px 22px;",
         "            box-shadow: 0 15px 35px rgba(0,0,0,0.8);",
         "            backdrop-filter: blur(15px);",
         "            text-align: center;",
         "        }",
-        "        .category-title { font-size: 24px; font-weight: 800; color: #a5f3fc; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }",
-        "        .item-number { display: inline-block; background: #00d2ff; color: #0b0f19; font-size: 22px; font-weight: 900; padding: 6px 16px; border-radius: 12px; margin-bottom: 15px; }",
-        "        .item-title { font-size: 34px; font-weight: 900; color: #ffffff; text-transform: uppercase; line-height: 1.2; text-shadow: 0 0 10px rgba(0,210,255,0.5); margin-bottom: 12px; }",
-        "        .item-desc { font-size: 22px; font-weight: 600; color: #fde047; line-height: 1.4; }",
+        "        .category-title { font-size: 22px; font-weight: 800; color: #a5f3fc; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px; }",
+        "        .item-number { display: inline-block; background: #00d2ff; color: #0b0f19; font-size: 22px; font-weight: 900; padding: 6px 16px; border-radius: 12px; margin-bottom: 12px; }",
+        "        .item-title { font-size: 32px; font-weight: 900; color: #ffffff; text-transform: uppercase; line-height: 1.2; text-shadow: 0 0 12px rgba(0,210,255,0.6); margin-bottom: 10px; }",
+        "        .item-desc { font-size: 21px; font-weight: 600; color: #fde047; line-height: 1.35; }",
 
         "        .cta-box {",
         "            background: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);",
@@ -153,7 +160,6 @@ def renderizar_html_a_png(archivo_html, archivo_png):
         browser.close()
 
 def crear_clip_subtitulo_limpio(texto_frase, duracion_frase, ancho=720, alto=160):
-    # Genera subtítulo flotante transparente SIN cajas grandes
     img = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
@@ -175,10 +181,8 @@ def crear_clip_subtitulo_limpio(texto_frase, duracion_frase, ancho=720, alto=160
 
     y_offset = (alto - (len(lines) * 40)) // 2
     for line in lines:
-        # Borde negro grueso alrededor del texto para máxima legibilidad
         for dx, dy in [(-3,-3), (3,-3), (-3,3), (3,3), (-3,0), (3,0), (0,-3), (0,3)]:
             draw.text((ancho // 2 + dx, y_offset + dy), line, fill=(0, 0, 0, 255), anchor="mm", font=font)
-        # Texto principal amarillo neón
         draw.text((ancho // 2, y_offset), line, fill=(255, 235, 0, 255), anchor="mm", font=font)
         y_offset += 40
 
@@ -188,8 +192,8 @@ def crear_clip_subtitulo_limpio(texto_frase, duracion_frase, ancho=720, alto=160
     clip = ImageClip(nombre_temp).set_duration(duracion_frase)
     return clip, nombre_temp
 
-def generar_subtitulos_dinamicos(guion_texto, duracion_total):
-    palabras = guion_texto.split()
+def generar_subtitulos_escena(texto_escena, duracion_escena):
+    palabras = texto_escena.split()
     frases = []
     chunk = []
     
@@ -211,10 +215,9 @@ def generar_subtitulos_dinamicos(guion_texto, duracion_total):
 
     for frase in frases:
         proporcion = len(frase) / total_chars
-        duracion_frase = duracion_total * proporcion
+        duracion_frase = duracion_escena * proporcion
         
         clip, temp_file = crear_clip_subtitulo_limpio(frase, duracion_frase)
-        # Posición flotante limpia en la zona inferior libre
         clip = clip.set_start(tiempo_actual).set_position(("center", 900))
         
         clips_subtitulos.append(clip)
@@ -223,57 +226,53 @@ def generar_subtitulos_dinamicos(guion_texto, duracion_total):
 
     return clips_subtitulos, archivos_temp
 
-def crear_video(guion_texto, titulo_general, escenas=[], archivo_salida="noticia_tiktok.mp4"):
-    print("1. Generando voz en off...")
-    asyncio.run(generar_audio(guion_texto, "voz.mp3"))
+def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
+    titulo_general = datos_guion.get("titulo_general", "TOP JUEGOS CONSOLA FLASHEADAS")
+    escenas = datos_guion.get("escenas", [])
 
-    audio = AudioFileClip("voz.mp3")
-    duracion_total = audio.duration
-
-    if not escenas:
-        escenas = [
-            {"item": "Consolas Liberadas", "detalle": "Catálogo completo de juegos", "image_prompt": "ps4 console neon"},
-            {"item": "Servicio Técnico", "detalle": "Mantenimiento profesional", "image_prompt": "tech repair motherboard"}
-        ]
-
-    num_escenas = len(escenas)
-    duracion_por_escena = duracion_total / num_escenas
-
-    print(f"2. Generando {num_escenas} escenas visuales con imágenes específicas...")
-    clips_escenas = []
-    archivos_escenas_temp = []
+    print(f"1. Procesando {len(escenas)} escenas con sincronización e imágenes reales HD...")
+    
+    clips_completos_escenas = []
+    archivos_temporales = []
 
     for idx, esc in enumerate(escenas, 1):
-        html_filename = f"escena_{idx}.html"
-        png_filename = f"escena_{idx}.png"
-        
-        generar_html_escena(
-            titulo_general, 
-            esc.get("item", f"Opción #{idx}"), 
-            esc.get("detalle", ""), 
-            idx, 
-            esc.get("image_prompt", "gaming console"), 
-            html_filename
-        )
-        renderizar_html_a_png(html_filename, png_filename)
-        
-        # Clip de imagen con leve zoom
-        clip_img = ImageClip(png_filename).set_duration(duracion_por_escena)
-        clip_anim = clip_img.resize(lambda t: 1 + 0.03 * (t / duracion_por_escena)).set_position(('center', 'center'))
-        
-        clips_escenas.append(clip_anim)
-        archivos_escenas_temp.extend([html_filename, png_filename])
+        item_nombre = esc.get("item", f"Opción #{idx}")
+        item_detalle = esc.get("detalle", "")
+        texto_locucion = esc.get("texto_locucion", "")
+        busqueda_img = esc.get("busqueda_imagen", item_nombre)
 
-    # Concatenar todas las escenas para formar la secuencia completa
-    video_base = concatenate_videoclips(clips_escenas)
+        # 1. Generar audio específico para esta escena
+        audio_file = f"voz_{idx}.mp3"
+        asyncio.run(generar_audio(texto_locucion, audio_file))
+        audio_clip = AudioFileClip(audio_file)
+        duracion_escena = audio_clip.duration
 
-    print("3. Aplicando subtítulos flotantes limpios estilo TikTok...")
-    clips_sub, archivos_sub_temp = generar_subtitulos_dinamicos(guion_texto, duracion_total)
+        # 2. Obtener imagen real del juego desde la API
+        url_imagen_real = obtener_imagen_real_juego(busqueda_img)
 
-    lista_capas = [video_base] + clips_sub
-    video_final = CompositeVideoClip(lista_capas, size=(720, 1280)).set_audio(audio)
+        # 3. Renderizar imagen HTML
+        html_file = f"escena_{idx}.html"
+        png_file = f"escena_{idx}.png"
+        generar_html_escena(titulo_general, item_nombre, item_detalle, idx, url_imagen_real, html_file)
+        renderizar_html_a_png(html_file, png_file)
 
-    print("4. Renderizando video final MP4...")
+        # 4. Crear clip visual con animación Ken Burns
+        clip_base = ImageClip(png_file).set_duration(duracion_escena)
+        clip_anim = clip_base.resize(lambda t: 1 + 0.03 * (t / duracion_escena)).set_position(('center', 'center'))
+
+        # 5. Generar subtítulos sincronizados para esta escena
+        subs_escena, temp_subs = generar_subtitulos_escena(texto_locucion, duracion_escena)
+
+        # 6. Combinar video + audio + subtítulos de la escena
+        video_escena = CompositeVideoClip([clip_anim] + subs_escena, size=(720, 1280)).set_audio(audio_clip)
+        clips_completos_escenas.append(video_escena)
+
+        archivos_temporales.extend([audio_file, html_file, png_file] + temp_subs)
+
+    print("2. Concatenando todas las escenas sincronizadas...")
+    video_final = concatenate_videoclips(clips_completos_escenas)
+
+    print("3. Renderizando archivo MP4...")
     video_final.write_videofile(
         archivo_salida,
         fps=24,
@@ -283,11 +282,10 @@ def crear_video(guion_texto, titulo_general, escenas=[], archivo_salida="noticia
         remove_temp=True
     )
 
-    audio.close()
     video_final.close()
 
-    # Limpieza de archivos temporales
-    for f in archivos_escenas_temp + archivos_sub_temp:
+    # Limpiar archivos temporales
+    for f in archivos_temporales:
         if os.path.exists(f):
             try:
                 os.remove(f)
