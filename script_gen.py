@@ -8,43 +8,49 @@ def generar_guion(noticias):
     prompt = f"""
     Eres el experto técnico del canal @walfedw especializado en consolas flasheadas/liberadas (PS3, PS4, PS5 y Nintendo Switch).
 
-    Tendencias de la comunidad:
+    Novedades recopiladas:
     {texto_noticias}
 
-    INSTRUCCIONES CLAVE:
+    INSTRUCCIONES CLAVE DE RETENCIÓN TIKTOK:
     1. PROHIBIDO MENCIONAR NÚMEROS DE FIRMWARE (NUNCA digas "11.00", "9.00", etc.). Usa siempre "consola flasheada" o "sistema liberado".
-    2. Crea un video en 4 ESCENAS INDIVIDUALES.
-    3. CADA ESCENA DEBE TENER SU PROPIO TEXTO DE LOCUCIÓN ("texto_locucion") para que la voz coincida EXACTAMENTE con el juego o tema que está en pantalla.
+    2. Genera una estructura completa con:
+       - GANCHO INICIAL (0-3s): Pregunta/frase directa que detenga el scroll.
+       - 4 ESCENAS DE CONTENIDO: Juegos indispensables o ventajas con su locución individual.
+       - CIERRE CTA (3s): Pregunta final motivando a comentar o pedir catálogo por privado.
 
     FORMATO DE SALIDA EXACTO (JSON puro sin markdown):
     {{
-        "titulo_general": "TOP JUEGOS INDISPENSABLES PS4 FLASHEADA",
+        "titulo_general": "TOP JUEGOS PS4 FLASHEADA",
+        "gancho_titulo": "¿TIENES PS4 FLASHEADA?",
+        "gancho_locucion": "¿Tienes tu PS4 flasheada? Guarda estos 4 juegos indispensables que debes probar ya.",
         "escenas": [
             {{
-                "item": "Resident Evil 4 Remake",
-                "detalle": "Gráficos de última generación y terror absoluto",
-                "texto_locucion": "En el número uno, Resident Evil 4 Remake. Gráficos brutales y terror en tu consola flasheada.",
-                "busqueda_imagen": "Resident Evil 4 Remake"
+                "item": "The Last of Us Part II",
+                "detalle": "Gráficos fotorrealistas y combate intenso",
+                "locucion": "En el número uno, The Last of Us Part II. Una historia épica aprovechando al máximo tu consola.",
+                "busqueda_imagen": "The Last of Us Part II"
             }},
             {{
-                "item": "Ghost of Tsushima",
-                "detalle": "Mundo abierto samurai en fluidez total",
-                "texto_locucion": "Número dos, Ghost of Tsushima. Explora el Japón feudal con combate rápido y cinemáticas espectaculares.",
-                "busqueda_imagen": "Ghost of Tsushima"
+                "item": "God of War Ragnarök",
+                "detalle": "Batallas mitológicas y fluidez total",
+                "locucion": "Número dos, God of War Ragnarök. Explora los nueve reinos con combate rápido y brutal.",
+                "busqueda_imagen": "God of War Ragnarok"
             }},
             {{
-                "item": "Uncharted 4: A Thief's End",
-                "detalle": "Aventura de acción cinematográfica imperdible",
-                "texto_locucion": "Número tres, Uncharted 4. Una historia cinematográfica que explota al máximo la potencia de tu consola.",
-                "busqueda_imagen": "Uncharted 4 A Thiefs End"
+                "item": "Elden Ring",
+                "detalle": "Mundo abierto gigantesco y desafíos sin fin",
+                "locucion": "Número tres, Elden Ring. Conquista un mundo abierto colosal en tu sistema liberado.",
+                "busqueda_imagen": "Elden Ring"
             }},
             {{
                 "item": "Mods y Trucos Exclusivos",
-                "detalle": "Parches de 60 FPS, cheats y personalización",
-                "texto_locucion": "Y número cuatro, Mods exclusivos. Desbloquea 60 FPS y trucos en Walfedw. ¡Escríbenos para catálogo y asesoría!",
+                "detalle": "Desbloquea 60 FPS, parches y cheats",
+                "locucion": "Y número cuatro, Mods exclusivos. Activa 60 FPS y trucos ilimitados.",
                 "busqueda_imagen": "PlayStation 4 Console"
             }}
         ],
+        "cierre_titulo": "¿CUÁL ES TU FAVORITO?",
+        "cierre_locucion": "¿Cuál es tu favorito? Comenta aquí abajo o escríbenos al privado para el catálogo completo.",
         "hashtags": "#PS4Flasheada #JuegosPS4 #NintendoSwitch #ConsolaLiberada #walfedw"
     }}
     """
@@ -64,7 +70,7 @@ def generar_guion(noticias):
                 if "```json" in texto_respuesta:
                     texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
                 elif "```" in texto_respuesta:
-                    texto_respuesta = texto_respuesta.split("```")[1].split("```")[0].strip()
+                    texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
 
                 return json.loads(texto_respuesta)
         except Exception as e:
