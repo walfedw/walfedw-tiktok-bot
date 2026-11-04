@@ -223,10 +223,10 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
         .category-title {{ font-size: 20px; font-weight: 800; color: #a5f3fc; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 1px; }}
         .item-number {{ display: inline-block; background: #00d2ff; color: #0b0f19; font-size: 19px; font-weight: 900; padding: 4px 14px; border-radius: 10px; margin-bottom: 10px; }}
 
-        /* ÁREA VISUAL GIGANTE PARA PANTALLAS DE CELULAR */
+        /* ÁREA VISUAL GIGANTE CENTRADA PARA PANTALLAS DE CELULAR */
         .game-banner-box {{
             width: 100%;
-            height: 440px;
+            height: 420px;
             border-radius: 18px;
             overflow: hidden;
             border: 3px solid #00d2ff;
@@ -266,7 +266,7 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
             {avatar_html}
             <div class="header-info">
                 <div class="brand">@WALFEDW</div>
-                <div class="sub-brand">FLASHEO • JUEGOS • SOFTWARE PS4</div>
+                <div class="sub-brand">FLASHEO • JUEGOS • SOFTWARE</div>
             </div>
         </div>
         <div class="main-card">
@@ -279,8 +279,8 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
             <div class="item-desc">{detalle}</div>
         </div>
         <div class="cta-box">
-            <div class="cta-title">PS4 FLASHEADA • CATÁLOGO Y JUEGOS</div>
-            <div class="cta-desc">Escribenos para Asesoria e Instalacion</div>
+            <div class="cta-title">PS3 • PS4 • PS5</div>
+            <div class="cta-desc">Escribenos para Asesoria y Catalogo de Juegos</div>
         </div>
     </div>
 </body>
@@ -379,7 +379,7 @@ def procesar_escena_individual(idx, sup_title, badge, main_title, detail, locuci
     renderizar_html_a_png(html_file, png_file)
 
     clip_base = ImageClip(png_file).set_duration(duracion)
-    # Animación de movimiento de cámara sobre el arte principal
+    # Movimiento dinámico de cámara sobre la plantilla
     clip_anim = clip_base.resize(lambda t: 1 + 0.04 * (t / duracion)).set_position(('center', 'center'))
 
     subs_escena, temp_subs = generar_subtitulos_escena(locucion, duracion)
