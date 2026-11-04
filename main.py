@@ -35,19 +35,25 @@ def enviar_a_telegram(video_path, titulo, guion, hashtags):
         raise RuntimeError(f"Error al enviar a Telegram ({response.status_code}): {response.text}")
 
 def main():
-    print("1. Buscando últimas noticias RSS...")
+    print("1. Buscando tendencias en Reddit y blogs de Scene...")
     noticias = obtener_noticias()
     if not noticias:
         print("No se encontraron noticias.")
         return
 
-    print("2. Generando guion e idea visual...")
+    print("2. Generando guion enfocado en consolas flasheadas...")
     datos = generar_guion(noticias)
 
-    prompt_imagen = datos.get("image_prompt", "gaming console hardware")
+    codigo_pantalla = datos.get("codigo_pantalla", "")
+    prompt_imagen = datos.get("image_prompt", "ps4 console hardware neon")
 
-    print("3. Renderizando el video profesional...")
-    archivo_video = crear_video(datos["guion"], datos["titulo"], prompt_imagen)
+    print("3. Renderizando video con interfaz HTML/CSS...")
+    archivo_video = crear_video(
+        datos["guion"], 
+        datos["titulo"], 
+        codigo_pantalla, 
+        prompt_imagen
+    )
 
     print("4. Enviando el video a Telegram...")
     enviar_a_telegram(
