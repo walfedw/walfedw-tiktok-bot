@@ -5,17 +5,17 @@ import requests
 
 HISTORIAL_FILE = "historial.json"
 
-# Catálogo con juegos 100% reales para garantizar imágenes oficiales y locución natural
+# Catálogo exclusivo de juegos reales y servicios de flasheo/software
 CATALOGO_JUEGOS_REALES = [
-    {"item": "God of War Ragnarök", "detalle": "Combate épico y gráficos brutales", "locucion": "En el número uno, God of War Ragnarök. Vive la batalla final de Kratos con fluidez total en tu consola liberada.", "busqueda_imagen": "God of War Ragnarok"},
-    {"item": "The Last of Us Part II", "detalle": "Historia intensa y combate realista", "locucion": "Número dos, The Last of Us Part II. Una experiencia cinematográfica impactante que explota tu PS4 al máximo.", "busqueda_imagen": "The Last of Us Part II"},
-    {"item": "Ghost of Tsushima", "detalle": "Mundo abierto samurai a 60 FPS", "locucion": "Número tres, Ghost of Tsushima. Domina la katana en el Japón feudal con rendimiento espectacular.", "busqueda_imagen": "Ghost of Tsushima"},
-    {"item": "Red Dead Redemption 2", "detalle": "El salvaje oeste definitivo", "locucion": "En el número uno, Red Dead Redemption 2. Explora el mapa más detallado de la historia en tu sistema liberado.", "busqueda_imagen": "Red Dead Redemption 2"},
-    {"item": "Spider-Man: Miles Morales", "detalle": "Acción frenética por Nueva York", "locucion": "Número dos, Spider-Man Miles Morales. Balancéate a máxima velocidad con efectos visuales impresionantes.", "busqueda_imagen": "Spider-Man Miles Morales"},
-    {"item": "Bloodborne", "detalle": "El clásico exclusivo imprescindible", "locucion": "Número tres, Bloodborne. Enfrenta pesadillas góticas con el parche de 60 cuadros por segundo exclusivo.", "busqueda_imagen": "Bloodborne"},
-    {"item": "Elden Ring", "detalle": "Desafío colosal de mundo abierto", "locucion": "En el número uno, Elden Ring. Conquista las Tierras Intermedias sin restricciones en tu consola flasheada.", "busqueda_imagen": "Elden Ring"},
-    {"item": "Resident Evil 4 Remake", "detalle": "Terror y acción de última generación", "locucion": "Número dos, Resident Evil 4 Remake. Revive un clásico de leyenda con gráficos de infarto.", "busqueda_imagen": "Resident Evil 4 Remake"},
-    {"item": "GTA V (Grand Theft Auto V)", "detalle": "Caos total con menú de mods", "locucion": "Número tres, GTA 5. Instala menús de trucos y mods de vehículos para divertirte sin límites.", "busqueda_imagen": "Grand Theft Auto V"}
+    {"item": "Red Dead Redemption 2", "detalle": "Mundo abierto con detalles hiperrealistas", "locucion": "En el número uno, Red Dead Redemption 2. Explora el mapa más detallado de la historia en tu consola liberada.", "busqueda_imagen": "Red Dead Redemption 2"},
+    {"item": "Grand Theft Auto V", "detalle": "Acción sin límites con parches y mods", "locucion": "Número dos, Grand Theft Auto V. Disfruta de Los Santos con fluidez y catálogo completo en tu sistema flasheado.", "busqueda_imagen": "Grand Theft Auto V"},
+    {"item": "Bloodborne", "detalle": "Exclusivo gótico a 60 FPS", "locucion": "Número tres, Bloodborne. Desbloquea la experiencia gótica definitiva con el parche de 60 cuadros por segundo.", "busqueda_imagen": "Bloodborne"},
+    {"item": "God of War Ragnarök", "detalle": "Combate brutal y animación fluida", "locucion": "En el número uno, God of War Ragnarök. Vive la batalla final de Kratos aprovechando al máximo tu consola liberada.", "busqueda_imagen": "God of War Ragnarok"},
+    {"item": "The Last of Us Part II", "detalle": "Narrativa cinematográfica de alto nivel", "locucion": "Número dos, The Last of Us Part II. Una historia impactante con gráficos que explotan el potencial de tu consola.", "busqueda_imagen": "The Last of Us Part II"},
+    {"item": "Ghost of Tsushima", "detalle": "Japón feudal a máxima velocidad", "locucion": "Número tres, Ghost of Tsushima. Domina la katana en un mundo abierto espectacular sin restricciones de software.", "busqueda_imagen": "Ghost of Tsushima"},
+    {"item": "Elden Ring", "detalle": "Desafío de mundo abierto legendario", "locucion": "En el número uno, Elden Ring. Conquista las Tierras Intermedias con total libertad en tu sistema liberado.", "busqueda_imagen": "Elden Ring"},
+    {"item": "Spider-Man: Miles Morales", "detalle": "Acción frenética por Nueva York", "locucion": "Número dos, Spider-Man Miles Morales. Balancéate por la ciudad con rendimiento impecable en tu consola.", "busqueda_imagen": "Marvels Spider Man Miles Morales"},
+    {"item": "Resident Evil 4 Remake", "detalle": "Terror y acción redefinidos", "locucion": "Número tres, Resident Evil 4 Remake. Revive este clásico de leyenda con gráficos fotorrealistas en Walfedw.", "busqueda_imagen": "Resident Evil 4 Remake"}
 ]
 
 def cargar_historial():
@@ -53,11 +53,11 @@ def generar_guion(noticias):
     HISTORIAL DE JUEGOS YA USADOS (¡PROHIBIDO REPETIR ESTOS NOMBRES!):
     {string_historial}
 
-    REGLAS ESTRICTAS E IMPRESCINDIBLES:
-    1. USAR ÚNICAMENTE JUEGOS REALES Y FAMOSOS DE PLAYSTATION O SWITCH (Ejemplos: Bloodborne, Red Dead Redemption 2, GTA V, Elden Ring, God of War Ragnarok, Resident Evil 4 Remake, Spider-Man, Ghost of Tsushima, FIFA, Horizon, The Last of Us, Zelda, Mario, etc.).
-    2. ¡PROHIBIDO INVENTAR JUEGOS QUE NO EXISTAN!
-    3. PROHIBIDO MENCIONAR NÚMEROS DE FIRMWARE (NUNCA digas "11.00", "9.00", etc.). Usa "consola flasheada" o "sistema liberado".
-    4. Redacta locuciones naturales, dinámicas y con energía comercial en ESPAÑOL LATINO. No uses frases robóticas.
+    REGLAS ESTRICTAS:
+    1. PROHIBIDO MENCIONAR LA PALABRA MANTENIMIENTO. Enfócate SOLO en Flasheo, Liberación, Catálogo de Juegos y Software.
+    2. Usa únicamente nombres de juegos 100% reales de PlayStation y Switch.
+    3. PROHIBIDO MENCIONAR NÚMEROS DE FIRMWARE (Usa "consola flasheada" o "sistema liberado").
+    4. Redacta locuciones comerciales dinámicas con voz en vivo estilo gamer.
 
     FORMATO DE SALIDA EXACTO (JSON puro sin markdown):
     {{
@@ -66,32 +66,32 @@ def generar_guion(noticias):
         "gancho_locucion": "¿Tienes tu PS4 flasheada? Guarda estos 3 juegos indispensables que debes probar ya.",
         "escenas": [
             {{
-                "item": "Nombre Exacto de Juego Real 1",
-                "detalle": "Resumen corto de beneficio",
-                "locucion": "En el número uno, [Nombre del Juego 1] y su explicación entusiasta.",
+                "item": "Nombre del Juego 1",
+                "detalle": "Beneficio de jugarlo liberado",
+                "locucion": "En el número uno, [Nombre 1] y su explicación comercial.",
                 "busqueda_imagen": "Nombre del juego en inglés para RAWG"
             }},
             {{
-                "item": "Nombre Exacto de Juego Real 2",
-                "detalle": "Resumen corto de beneficio",
-                "locucion": "Número dos, [Nombre del Juego 2] y su explicación entusiasta.",
+                "item": "Nombre del Juego 2",
+                "detalle": "Beneficio de jugarlo liberado",
+                "locucion": "Número dos, [Nombre 2] y su explicación comercial.",
                 "busqueda_imagen": "Nombre del juego en inglés para RAWG"
             }},
             {{
-                "item": "Nombre Exacto de Juego Real 3",
-                "detalle": "Resumen corto de beneficio",
-                "locucion": "Número tres, [Nombre del Juego 3] y su explicación entusiasta.",
+                "item": "Nombre del Juego 3",
+                "detalle": "Beneficio de jugarlo liberado",
+                "locucion": "Número tres, [Nombre 3] y su explicación comercial.",
                 "busqueda_imagen": "Nombre del juego en inglés para RAWG"
             }},
             {{
-                "item": "Mods y Trucos Exclusivos",
+                "item": "Mods y Parches de Software",
                 "detalle": "Desbloquea 60 FPS y cheats",
-                "locucion": "Y número cuatro, Mods exclusivos. Activa parches de 60 FPS y trucos ilimitados en Walfedw.",
+                "locucion": "Y número cuatro, Parches de software exclusivos. Activa 60 FPS y trucos en Walfedw.",
                 "busqueda_imagen": "PlayStation 4 Console"
             }}
         ],
         "cierre_titulo": "¿CUÁL ES TU FAVORITO?",
-        "cierre_locucion": "¿Cuál es tu favorito? Comenta aquí abajo o escríbenos al privado para enviarte el catálogo completo.",
+        "cierre_locucion": "¿Cuál es tu favorito? Comenta aquí abajo o escríbenos al privado para la instalación de juegos y flasheo.",
         "hashtags": "#PS4Flasheada #JuegosPS4 #NintendoSwitch #ConsolaLiberada #walfedw"
     }}
     """
@@ -116,16 +116,15 @@ def generar_guion(noticias):
                 datos = json.loads(texto_respuesta)
                 escenas_recibidas = datos.get("escenas", [])
                 
-                # Verificar si la IA devolvió juegos inventados o genéricos
                 juegos_validos = True
                 for esc in escenas_recibidas:
                     nombre = esc.get("item", "").lower()
-                    if "underworld" in nombre or "phantom drive" in nombre or "simucraft" in nombre or "nombre del juego" in nombre:
+                    if "underworld" in nombre or "phantom" in nombre or "simucraft" in nombre or "nombre del juego" in nombre:
                         juegos_validos = False
                         break
                 
                 if not juegos_validos or len(escenas_recibidas) < 3:
-                    print("Advertencia: IA devolvió nombres genéricos/inventados. Filtrando con catálogo de juegos reales...")
+                    print("Filtrando con catálogo oficial de juegos reales...")
                     no_usados = [j for j in CATALOGO_JUEGOS_REALES if j["item"] not in historial_usados]
                     if len(no_usados) < 4:
                         no_usados = CATALOGO_JUEGOS_REALES
@@ -138,7 +137,7 @@ def generar_guion(noticias):
             print(f"Advertencia intento {intento}: {e}")
             time.sleep(3)
 
-    print("Usando juegos de respaldo del catálogo real...")
+    print("Usando juegos del catálogo real...")
     no_usados = [j for j in CATALOGO_JUEGOS_REALES if j["item"] not in historial_usados]
     if len(no_usados) < 4:
         no_usados = CATALOGO_JUEGOS_REALES
