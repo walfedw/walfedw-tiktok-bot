@@ -5,6 +5,33 @@ import requests
 
 HISTORIAL_FILE = "historial.json"
 
+ESCENAS_RESPALDO = [
+    {
+        "item": "Red Dead Redemption 2",
+        "detalle": "Mundo abierto colosal y detalles realistas",
+        "locucion": "En el número uno, Red Dead Redemption 2. Una obra maestra del mundo abierto en tu consola liberada.",
+        "busqueda_imagen": "Red Dead Redemption 2"
+    },
+    {
+        "item": "Spider-Man: Miles Morales",
+        "detalle": "Acción frenética a máxima velocidad",
+        "locucion": "Número dos, Spider-Man Miles Morales. Gráficos espectaculares y balanceo fluido.",
+        "busqueda_imagen": "Marvels Spider Man Miles Morales"
+    },
+    {
+        "item": "Cyberpunk 2077",
+        "detalle": "Night City con rendimiento optimizado",
+        "locucion": "Número tres, Cyberpunk 2077. Disfruta Night City con todos sus parches en tu sistema liberado.",
+        "busqueda_imagen": "Cyberpunk 2077"
+    },
+    {
+        "item": "Mods y Trucos Exclusivos",
+        "detalle": "Desbloquea 60 FPS, parches y cheats",
+        "locucion": "Y número cuatro, Mods exclusivos. Activa 60 FPS y trucos ilimitados en Walfedw.",
+        "busqueda_imagen": "PlayStation 4 Setup"
+    }
+]
+
 def cargar_historial():
     if os.path.exists(HISTORIAL_FILE):
         try:
@@ -43,10 +70,7 @@ def generar_guion(noticias):
     INSTRUCCIONES CLAVE DE RETENCIÓN TIKTOK:
     1. PROHIBIDO MENCIONAR NÚMEROS DE FIRMWARE (NUNCA digas "11.00", "9.00", etc.). Usa "consola flasheada" o "sistema liberado".
     2. NUNCA elijas un juego o tema presente en la lista de elementos ya utilizados.
-    3. Estructura la salida con:
-       - GANCHO INICIAL (0-3s): Pregunta/frase directa de alto impacto.
-       - 4 ESCENAS DE CONTENIDO: Juegos indispensables o ventajas con su locución individual.
-       - CIERRE CTA (3s): Pregunta final motivando a comentar o pedir catálogo por privado.
+    3. CADA ESCENA DEBE SER UN JUEGO DISTINTO O UTILIDAD CON SU PROPIA LOCUCIÓN.
 
     FORMATO DE SALIDA EXACTO (JSON puro sin markdown):
     {{
@@ -55,28 +79,28 @@ def generar_guion(noticias):
         "gancho_locucion": "¿Tienes tu PS4 flasheada? Guarda estos 4 juegos indispensables que debes probar ya.",
         "escenas": [
             {{
-                "item": "Red Dead Redemption 2",
-                "detalle": "Mundo abierto colosal y detalles realistas",
-                "locucion": "En el número uno, Red Dead Redemption 2. Una obra maestra del mundo abierto en tu consola liberada.",
-                "busqueda_imagen": "Red Dead Redemption 2"
+                "item": "Nombre del Juego 1",
+                "detalle": "Detalle llamativo corto",
+                "locucion": "En el número uno, Nombre del Juego 1 y sus características.",
+                "busqueda_imagen": "Nombre del Juego 1"
             }},
             {{
-                "item": "Spider-Man: Miles Morales",
-                "detalle": "Acción frenética a máxima velocidad",
-                "locucion": "Número dos, Spider-Man Miles Morales. Gráficos espectaculares y balanceo fluido por Nueva York.",
-                "busqueda_imagen": "Marvels Spider Man Miles Morales"
+                "item": "Nombre del Juego 2",
+                "detalle": "Detalle llamativo corto",
+                "locucion": "Número dos, Nombre del Juego 2 y su rendimiento.",
+                "busqueda_imagen": "Nombre del Juego 2"
             }},
             {{
-                "item": "Cyberpunk 2077",
-                "detalle": "Night City con rendimiento optimizado",
-                "locucion": "Número tres, Cyberpunk 2077. Disfruta Night City con todos sus parches en tu sistema liberado.",
-                "busqueda_imagen": "Cyberpunk 2077"
+                "item": "Nombre del Juego 3",
+                "detalle": "Detalle llamativo corto",
+                "locucion": "Número tres, Nombre del Juego 3 en tu sistema liberado.",
+                "busqueda_imagen": "Nombre del Juego 3"
             }},
             {{
                 "item": "Mods y Trucos Exclusivos",
-                "detalle": "Desbloquea 60 FPS, parches y cheats",
+                "detalle": "Desbloquea 60 FPS y cheats",
                 "locucion": "Y número cuatro, Mods exclusivos. Activa 60 FPS y trucos ilimitados en Walfedw.",
-                "busqueda_imagen": "PlayStation 4 Console"
+                "busqueda_imagen": "PlayStation 4 Setup"
             }}
         ],
         "cierre_titulo": "¿CUÁL ES TU FAVORITO?",
@@ -100,11 +124,16 @@ def generar_guion(noticias):
                 if "```json" in texto_respuesta:
                     texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
                 elif "```" in texto_respuesta:
-                    texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
+                    texto_respuesta = texto_respuesta.split("```")[1].split("```")[0].strip()
 
                 datos = json.loads(texto_respuesta)
                 
-                # Guardar en historial los nuevos items generados
+                # Validar que contenga al menos 3 escenas válidas
+                escenas_recibidas = datos.get("escenas", [])
+                if not escenas_recibidas or len(escenas_recibidas) < 3:
+                    print("Advertencia: IA devolvió escenas insuficientes. Aplicando escenas de respaldo...")
+                    datos["escenas"] = ESCENAS_RESPALDO
+                
                 nuevos = [e.get("item") for e in datos.get("escenas", []) if e.get("item")]
                 guardar_historial(nuevos)
                 
@@ -113,7 +142,16 @@ def generar_guion(noticias):
             print(f"Advertencia intento {intento}: {e}")
             time.sleep(3)
 
-    raise RuntimeError("Error al conectar con la IA tras 3 intentos.")
+    print("Error conectando con la IA. Generando video con datos de respaldo de alta calidad...")
+    return {
+        "titulo_general": "TOP JUEGOS PS4 FLASHEADA",
+        "gancho_titulo": "¿TIENES PS4 FLASHEADA?",
+        "gancho_locucion": "¿Tienes tu PS4 flasheada? Guarda estos 4 juegos indispensables que debes probar ya.",
+        "escenas": ESCENAS_RESPALDO,
+        "cierre_titulo": "¿CUÁL ES TU FAVORITO?",
+        "cierre_locucion": "¿Cuál es tu favorito? Comenta aquí abajo o escríbenos al privado para el catálogo completo.",
+        "hashtags": "#PS4Flasheada #JuegosPS4 #NintendoSwitch #ConsolaLiberada #walfedw"
+    }
 
 if __name__ == "__main__":
     from rss_reader import obtener_noticias
