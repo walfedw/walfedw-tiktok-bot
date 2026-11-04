@@ -32,7 +32,7 @@ def enviar_a_telegram(video_path, titulo, guion, hashtags):
     if response.status_code == 200:
         print("Video enviado exitosamente a Telegram.")
     else:
-        print(f"Error al enviar a Telegram: {response.status_code} - {response.text}")
+        raise RuntimeError(f"Error al enviar a Telegram ({response.status_code}): {response.text}")
 
 def main():
     print("1. Buscando últimas noticias RSS...")
@@ -41,7 +41,7 @@ def main():
         print("No se encontraron noticias.")
         return
 
-    print("2. Generando guion con Gemini API...")
+    print("2. Generando guion...")
     datos = generar_guion(noticias)
 
     print("3. Renderizando el video...")
