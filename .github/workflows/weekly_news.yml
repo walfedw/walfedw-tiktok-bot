@@ -22,7 +22,7 @@ jobs:
     - name: Instalar FFmpeg y Fuentes tipográficas
       run: |
         sudo apt-get update
-        sudo apt-get install -y ffmpeg ttf-dejavu
+        sudo apt-get install -y ffmpeg fonts-dejavu
 
     - name: Instalar librerías de Python
       run: |
