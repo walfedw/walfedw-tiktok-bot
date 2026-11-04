@@ -17,7 +17,7 @@ VOCES = ["es-MX-DarianNeural", "es-MX-JorgeNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
 FALLBACK_IMAGES = [
-    "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1080&h=1920&fit=crop",
+    "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1080&h=1920&fit=crop",
     "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=1080&h=1920&fit=crop",
     "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=1080&h=1920&fit=crop"
 ]
@@ -49,20 +49,22 @@ def descargar_bytes_a_base64(url):
     raise ValueError("Respuesta inválida al descargar imagen.")
 
 def obtener_imagen_base64(nombre_juego, idx_escena=0):
+    busqueda_limpia = re.sub(r'[^\w\s]', '', nombre_juego).strip()
+    
     try:
-        url_rawg = f"https://api.rawg.io/api/games?search={requests.utils.quote(nombre_juego)}&key=c53a23720ea1477389822e6e3176477d&page_size=1"
+        url_rawg = f"https://api.rawg.io/api/games?search={requests.utils.quote(busqueda_limpia)}&key=c53a23720ea1477389822e6e3176477d&page_size=1"
         res = requests.get(url_rawg, timeout=8)
         if res.status_code == 200:
             data = res.json()
             if data.get("results") and data["results"][0].get("background_image"):
                 img_url = data["results"][0]["background_image"]
-                print(f"[RAWG] Imagen HD para: {nombre_juego}")
+                print(f"[RAWG OK] Imagen encontrada para: {busqueda_limpia}")
                 return descargar_bytes_a_base64(img_url)
     except Exception as e:
-        print(f"[RAWG Warning] {e}")
+        print(f"[RAWG Error] {e}")
 
     fallback_url = FALLBACK_IMAGES[idx_escena % len(FALLBACK_IMAGES)]
-    print(f"[Fallback HD] Carga genérica para escena #{idx_escena}")
+    print(f"[Fallback] Imagen genérica para escena #{idx_escena}")
     return descargar_bytes_a_base64(fallback_url)
 
 def descargar_musica_fondo():
@@ -104,7 +106,7 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
             background-image: url('{b64_img}');
             background-size: cover;
             background-position: center;
-            filter: brightness(0.65) contrast(1.1);
+            filter: brightness(0.60) contrast(1.1);
             z-index: 1;
         }}
         .container {{
@@ -277,7 +279,7 @@ def procesar_escena_individual(idx, sup_title, badge, main_title, detail, locuci
 
 def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     titulo_general = datos_guion.get("titulo_general", "TOP JUEGOS CONSOLA FLASHEADAS")
-    gancho_loc = datos_guion.get("gancho_locucion", "¿Tienes tu PS4 flasheada? Guarda estos 4 indispensables.")
+    gancho_loc = datos_guion.get("gancho_locucion", "¿Tienes tu PS4 flasheada? Guarda estos 3 juegos indispensables.")
     gancho_tit = datos_guion.get("gancho_titulo", "¿PS4 FLASHEADA?")
     escenas = datos_guion.get("escenas", [])
     cierre_loc = datos_guion.get("cierre_locucion", "¿Cuál es tu favorito? Comenta o escríbenos al privado.")
@@ -289,7 +291,7 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     print("1. Renderizando Gancho Inicial...")
     clip_gancho = procesar_escena_individual(
         0, titulo_general, "⚡ ATENCIÓN GAMERS ⚡", gancho_tit, 
-        "Guarda estos 4 títulos indispensables ya", gancho_loc, "PlayStation 4 Console Setup", archivos_temporales
+        "Guarda estos indispensables ya", gancho_loc, "PlayStation 4 Console Setup", archivos_temporales
     )
     clips_completos.append(clip_gancho)
 
