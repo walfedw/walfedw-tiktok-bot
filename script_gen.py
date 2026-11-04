@@ -8,38 +8,41 @@ def generar_guion(noticias):
     prompt = f"""
     Eres el experto técnico del canal @walfedw especializado en consolas flasheadas/liberadas (PS3, PS4, PS5 y Nintendo Switch).
 
-    Novedades recopiladas:
+    Tendencias de la comunidad:
     {texto_noticias}
 
     INSTRUCCIONES CLAVE:
     1. PROHIBIDO MENCIONAR NÚMEROS DE FIRMWARE (NUNCA digas "11.00", "9.00", etc.). Usa siempre "consola flasheada" o "sistema liberado".
-    2. Crea un contenido dinámico enfocado en TOPS DE JUEGOS INDISPENSABLES o CONSEJOS ÚTILES para consolas liberadas.
-    3. Estructura la salida en 4 ESCENAS VISUALES. Cada escena debe tener su título de juego/tema, un texto descriptivo breve y una frase clave en inglés para buscar su imagen de fondo representativa.
+    2. Crea un video en 4 ESCENAS INDIVIDUALES.
+    3. CADA ESCENA DEBE TENER SU PROPIO TEXTO DE LOCUCIÓN ("texto_locucion") para que la voz coincida EXACTAMENTE con el juego o tema que está en pantalla.
 
     FORMATO DE SALIDA EXACTO (JSON puro sin markdown):
     {{
-        "guion": "Texto completo fluido que hablará la voz en off durante todo el video",
         "titulo_general": "TOP JUEGOS INDISPENSABLES PS4 FLASHEADA",
         "escenas": [
             {{
-                "item": "The Last of Us Part II",
-                "detalle": "Gráficos al máximo y rendimiento superior",
-                "image_prompt": "the last of us part 2 game artwork 8k photorealistic"
+                "item": "Resident Evil 4 Remake",
+                "detalle": "Gráficos de última generación y terror absoluto",
+                "texto_locucion": "En el número uno, Resident Evil 4 Remake. Gráficos brutales y terror en tu consola flasheada.",
+                "busqueda_imagen": "Resident Evil 4 Remake"
             }},
             {{
                 "item": "Ghost of Tsushima",
-                "detalle": "Mundo abierto fluidez total y respuesta rápida",
-                "image_prompt": "ghost of tsushima samurai gameplay wallpaper 8k"
+                "detalle": "Mundo abierto samurai en fluidez total",
+                "texto_locucion": "Número dos, Ghost of Tsushima. Explora el Japón feudal con combate rápido y cinemáticas espectaculares.",
+                "busqueda_imagen": "Ghost of Tsushima"
             }},
             {{
-                "item": "God of War Ragnarök",
-                "detalle": "La experiencia completa de Kratos sin límites",
-                "image_prompt": "god of war ragnarok kratos epic gaming background 8k"
+                "item": "Uncharted 4: A Thief's End",
+                "detalle": "Aventura de acción cinematográfica imperdible",
+                "texto_locucion": "Número tres, Uncharted 4. Una historia cinematográfica que explota al máximo la potencia de tu consola.",
+                "busqueda_imagen": "Uncharted 4 A Thiefs End"
             }},
             {{
                 "item": "Mods y Trucos Exclusivos",
-                "detalle": "Mejoras de FPS, cheats y parches personalizados",
-                "image_prompt": "cyberpunk ps4 console modding neon light 8k"
+                "detalle": "Parches de 60 FPS, cheats y personalización",
+                "texto_locucion": "Y número cuatro, Mods exclusivos. Desbloquea 60 FPS y trucos en Walfedw. ¡Escríbenos para catálogo y asesoría!",
+                "busqueda_imagen": "PlayStation 4 Console"
             }}
         ],
         "hashtags": "#PS4Flasheada #JuegosPS4 #NintendoSwitch #ConsolaLiberada #walfedw"
