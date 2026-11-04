@@ -17,6 +17,13 @@ from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, Composi
 VOCES = ["es-MX-DarianNeural", "es-MX-JorgeNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
+# Lista de imágenes de respaldo garantizadas en HD si ninguna API responde
+FALLBACK_IMAGES = [
+    "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1080&h=1920&fit=crop",
+    "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=1080&h=1920&fit=crop",
+    "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=1080&h=1920&fit=crop"
+]
+
 def limpiar_texto(texto):
     return re.sub(r'[^\w\s.,¡!¿?@#\-áéíóúÁÉÍÓÚñÑ]', '', texto).strip()
 
@@ -35,25 +42,48 @@ async def generar_audio(texto, archivo_salida):
 
     raise RuntimeError("Error al generar el audio.")
 
-def obtener_imagen_base64(nombre_juego):
-    """Descarga la imagen oficial HD y la convierte a Data URI Base64 para carga 100% garantizada en Playwright."""
+def descargar_bytes_a_base64(url):
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WalfedwBot/1.0"}
+    res = requests.get(url, headers=headers, timeout=12)
+    if res.status_code == 200 and len(res.content) > 5000:
+        b64 = base64.b64encode(res.content).decode("utf-8")
+        return f"data:image/jpeg;base64,{b64}"
+    raise ValueError("Respuesta inválida al descargar imagen.")
+
+def obtener_imagen_base64(nombre_juego, idx_escena=0):
+    """Motor Multifuente: RAWG Games API -> Wikimedia Commons -> Unsplash Fallback HD."""
+    # Intentar Fuente 1: RAWG Database
     try:
-        url_api = f"https://api.rawg.io/api/games?search={requests.utils.quote(nombre_juego)}&key=c53a23720ea1477389822e6e3176477d&page_size=1"
-        res = requests.get(url_api, timeout=10)
+        url_rawg = f"https://api.rawg.io/api/games?search={requests.utils.quote(nombre_juego)}&key=c53a23720ea1477389822e6e3176477d&page_size=1"
+        res = requests.get(url_rawg, timeout=8)
         if res.status_code == 200:
             data = res.json()
             if data.get("results") and data["results"][0].get("background_image"):
                 img_url = data["results"][0]["background_image"]
-                img_res = requests.get(img_url, timeout=12)
-                if img_res.status_code == 200:
-                    b64 = base64.b64encode(img_res.content).decode("utf-8")
-                    print(f"Imagen HD descargada y convertida a Base64 para: {nombre_juego}")
-                    return f"data:image/jpeg;base64,{b64}"
+                print(f"[RAWG] Imagen HD encontrada para: {nombre_juego}")
+                return descargar_bytes_a_base64(img_url)
     except Exception as e:
-        print(f"Advertencia descargando imagen para {nombre_juego}: {e}")
-    
-    # Imagen de respaldo cyberpunk
-    return "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP..."
+        print(f"[RAWG Warning] {e}")
+
+    # Intentar Fuente 2: Wikimedia Commons API
+    try:
+        url_wiki = f"https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch={requests.utils.quote(nombre_juego)}&gsrnamespace=6&prop=imageinfo&iiprop=url&format=json"
+        res = requests.get(url_wiki, timeout=8)
+        if res.status_code == 200:
+            pages = res.json().get("query", {}).get("pages", {})
+            for page_id, val in pages.items():
+                imageinfo = val.get("imageinfo", [])
+                if imageinfo and imageinfo[0].get("url"):
+                    img_url = imageinfo[0]["url"]
+                    print(f"[Wikimedia] Imagen encontrada para: {nombre_juego}")
+                    return descargar_bytes_a_base64(img_url)
+    except Exception as e:
+        print(f"[Wikimedia Warning] {e}")
+
+    # Fuente 3: Respaldo garantizado de alta calidad
+    fallback_url = FALLBACK_IMAGES[idx_escena % len(FALLBACK_IMAGES)]
+    print(f"[Fallback HD] Cargando fondo genérico de alta resolución para escena #{idx_escena}")
+    return descargar_bytes_a_base64(fallback_url)
 
 def descargar_musica_fondo():
     archivo_bgm = "bgm.mp3"
@@ -94,7 +124,7 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
             background-image: url('{b64_img}');
             background-size: cover;
             background-position: center;
-            filter: brightness(0.50);
+            filter: brightness(0.65) contrast(1.1);
             z-index: 1;
         }}
         .container {{
@@ -118,7 +148,7 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
         .sub-brand {{ font-size: 18px; color: #ffc800; font-weight: 700; margin-top: 4px; }}
 
         .main-card {{
-            background: rgba(15, 23, 42, 0.92);
+            background: rgba(15, 23, 42, 0.90);
             border: 2px solid #00d2ff;
             border-radius: 24px;
             padding: 28px 22px;
@@ -249,7 +279,7 @@ def procesar_escena_individual(idx, sup_title, badge, main_title, detail, locuci
     audio_clip = AudioFileClip(audio_file)
     duracion = audio_clip.duration
 
-    b64_img = obtener_imagen_base64(query_img)
+    b64_img = obtener_imagen_base64(query_img, idx)
 
     html_file = f"escena_{idx}.html"
     png_file = f"escena_{idx}.png"
