@@ -1,9 +1,35 @@
+import os
 import json
 import time
 import requests
 
+HISTORIAL_FILE = "historial.json"
+
+def cargar_historial():
+    if os.path.exists(HISTORIAL_FILE):
+        try:
+            with open(HISTORIAL_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error leyendo historial: {e}")
+    return []
+
+def guardar_historial(nuevos_items):
+    historial = cargar_historial()
+    for item in nuevos_items:
+        if item and item not in historial:
+            historial.append(item)
+    try:
+        with open(HISTORIAL_FILE, "w", encoding="utf-8") as f:
+            json.dump(historial, f, indent=4, ensure_ascii=False)
+        print(f"Historial actualizado. Total acumulado: {len(historial)} elementos.")
+    except Exception as e:
+        print(f"Error guardando historial: {e}")
+
 def generar_guion(noticias):
     texto_noticias = "\n".join([f"- {n['titulo']}: {n['resumen']}" for n in noticias[:10]])
+    historial_usados = cargar_historial()
+    string_historial = ", ".join(historial_usados[-20:]) if historial_usados else "Ninguno aún"
 
     prompt = f"""
     Eres el experto técnico del canal @walfedw especializado en consolas flasheadas/liberadas (PS3, PS4, PS5 y Nintendo Switch).
@@ -11,10 +37,14 @@ def generar_guion(noticias):
     Novedades recopiladas:
     {texto_noticias}
 
+    ELEMENTOS YA UTILIZADOS ANTERIORMENTE (PROHIBIDO REPETIR ESTOS NOMBRES):
+    {string_historial}
+
     INSTRUCCIONES CLAVE DE RETENCIÓN TIKTOK:
-    1. PROHIBIDO MENCIONAR NÚMEROS DE FIRMWARE (NUNCA digas "11.00", "9.00", etc.). Usa siempre "consola flasheada" o "sistema liberado".
-    2. Genera una estructura completa con:
-       - GANCHO INICIAL (0-3s): Pregunta/frase directa que detenga el scroll.
+    1. PROHIBIDO MENCIONAR NÚMEROS DE FIRMWARE (NUNCA digas "11.00", "9.00", etc.). Usa "consola flasheada" o "sistema liberado".
+    2. NUNCA elijas un juego o tema presente en la lista de elementos ya utilizados.
+    3. Estructura la salida con:
+       - GANCHO INICIAL (0-3s): Pregunta/frase directa de alto impacto.
        - 4 ESCENAS DE CONTENIDO: Juegos indispensables o ventajas con su locución individual.
        - CIERRE CTA (3s): Pregunta final motivando a comentar o pedir catálogo por privado.
 
@@ -25,27 +55,27 @@ def generar_guion(noticias):
         "gancho_locucion": "¿Tienes tu PS4 flasheada? Guarda estos 4 juegos indispensables que debes probar ya.",
         "escenas": [
             {{
-                "item": "The Last of Us Part II",
-                "detalle": "Gráficos fotorrealistas y combate intenso",
-                "locucion": "En el número uno, The Last of Us Part II. Una historia épica aprovechando al máximo tu consola.",
-                "busqueda_imagen": "The Last of Us Part II"
+                "item": "Red Dead Redemption 2",
+                "detalle": "Mundo abierto colosal y detalles realistas",
+                "locucion": "En el número uno, Red Dead Redemption 2. Una obra maestra del mundo abierto en tu consola liberada.",
+                "busqueda_imagen": "Red Dead Redemption 2"
             }},
             {{
-                "item": "God of War Ragnarök",
-                "detalle": "Batallas mitológicas y fluidez total",
-                "locucion": "Número dos, God of War Ragnarök. Explora los nueve reinos con combate rápido y brutal.",
-                "busqueda_imagen": "God of War Ragnarok"
+                "item": "Spider-Man: Miles Morales",
+                "detalle": "Acción frenética a máxima velocidad",
+                "locucion": "Número dos, Spider-Man Miles Morales. Gráficos espectaculares y balanceo fluido por Nueva York.",
+                "busqueda_imagen": "Marvels Spider Man Miles Morales"
             }},
             {{
-                "item": "Elden Ring",
-                "detalle": "Mundo abierto gigantesco y desafíos sin fin",
-                "locucion": "Número tres, Elden Ring. Conquista un mundo abierto colosal en tu sistema liberado.",
-                "busqueda_imagen": "Elden Ring"
+                "item": "Cyberpunk 2077",
+                "detalle": "Night City con rendimiento optimizado",
+                "locucion": "Número tres, Cyberpunk 2077. Disfruta Night City con todos sus parches en tu sistema liberado.",
+                "busqueda_imagen": "Cyberpunk 2077"
             }},
             {{
                 "item": "Mods y Trucos Exclusivos",
                 "detalle": "Desbloquea 60 FPS, parches y cheats",
-                "locucion": "Y número cuatro, Mods exclusivos. Activa 60 FPS y trucos ilimitados.",
+                "locucion": "Y número cuatro, Mods exclusivos. Activa 60 FPS y trucos ilimitados en Walfedw.",
                 "busqueda_imagen": "PlayStation 4 Console"
             }}
         ],
@@ -72,7 +102,13 @@ def generar_guion(noticias):
                 elif "```" in texto_respuesta:
                     texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
 
-                return json.loads(texto_respuesta)
+                datos = json.loads(texto_respuesta)
+                
+                # Guardar en historial los nuevos items generados
+                nuevos = [e.get("item") for e in datos.get("escenas", []) if e.get("item")]
+                guardar_historial(nuevos)
+                
+                return datos
         except Exception as e:
             print(f"Advertencia intento {intento}: {e}")
             time.sleep(3)
