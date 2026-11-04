@@ -16,30 +16,32 @@ from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, Composi
 VOCES = ["es-MX-DarianNeural", "es-MX-JorgeNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
-# Repositorio 1: Mapa directo HD exclusivo de PS4 y Juegos (0 PS5)
+# Repositorio 1: Mapa directo HD con imágenes estrictamente verificadas (0 fotos de PS5)
 IMAGENES_DIRECTAS = {
-    "ghost of tsushima": "https://cdn.akamai.steamstatic.com/steam/apps/2215430/header.jpg",
-    "the last of us part ii": "https://cdn.akamai.steamstatic.com/steam/apps/1888930/header.jpg",
+    "the last of us part ii": "https://images.rawg.io/media/games/054/05494357022e399589d81d269fd4cb56.jpg",
+    "the last of us part 2": "https://images.rawg.io/media/games/054/05494357022e399589d81d269fd4cb56.jpg",
+    "marvel's spider-man": "https://cdn.akamai.steamstatic.com/steam/apps/1817070/header.jpg",
+    "marvels spider-man": "https://cdn.akamai.steamstatic.com/steam/apps/1817070/header.jpg",
+    "spider-man ps4": "https://cdn.akamai.steamstatic.com/steam/apps/1817070/header.jpg",
     "god of war ragnarok": "https://cdn.akamai.steamstatic.com/steam/apps/2322010/header.jpg",
     "god of war ragnarök": "https://cdn.akamai.steamstatic.com/steam/apps/2322010/header.jpg",
+    "ghost of tsushima": "https://cdn.akamai.steamstatic.com/steam/apps/2215430/header.jpg",
     "red dead redemption 2": "https://cdn.akamai.steamstatic.com/steam/apps/1174180/header.jpg",
     "grand theft auto v": "https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg",
     "gta v": "https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg",
     "elden ring": "https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg",
     "bloodborne": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1080&h=1920&fit=crop",
-    "spider-man miles morales": "https://cdn.akamai.steamstatic.com/steam/apps/1817070/header.jpg",
     "resident evil 4 remake": "https://cdn.akamai.steamstatic.com/steam/apps/2050650/header.jpg",
-    "cyberpunk 2077": "https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg",
-    "playstation 4 controller neon": "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=1080&h=1920&fit=crop",
-    "playstation 4 console": "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=1080&h=1920&fit=crop",
-    "playstation 4 setup": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1080&h=1920&fit=crop"
+    "playstation 4 dualshock controller": "https://images.unsplash.com/photo-1507457379470-08b800bebc67?w=1080&h=1920&fit=crop",
+    "playstation 4 console": "https://images.unsplash.com/photo-1507457379470-08b800bebc67?w=1080&h=1920&fit=crop",
+    "servicio flasheo ps4": "https://images.unsplash.com/photo-1507457379470-08b800bebc67?w=1080&h=1920&fit=crop"
 }
 
-# Imágenes de respaldo HD exclusivas de mando/consola PS4 (Sin PS5)
+# Fotos de respaldo 100% PS4 (Mando DualShock 4 negro / ambiente gaming)
 FALLBACK_IMAGES = [
-    "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=1080&h=1920&fit=crop",
-    "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1080&h=1920&fit=crop",
-    "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1080&h=1920&fit=crop"
+    "https://images.unsplash.com/photo-1507457379470-08b800bebc67?w=1080&h=1920&fit=crop",
+    "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=1080&h=1920&fit=crop",
+    "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1080&h=1920&fit=crop"
 ]
 
 def limpiar_texto(texto):
@@ -61,7 +63,7 @@ def cargar_logo_base64():
 async def generar_audio(texto, archivo_salida):
     texto_procesar = limpiar_texto(texto)
     if not texto_procesar:
-        texto_procesar = "Flasheo de PS4, catálogo de juegos y software profesional en Walfedw."
+        texto_procesar = "Flasheo de PS4, catálogo de juegos y software en Walfedw."
 
     for voz in VOCES:
         try:
@@ -84,7 +86,7 @@ def descargar_bytes_a_base64(url):
 def obtener_imagen_base64(nombre_juego, idx_escena=0):
     nombre_lower = nombre_juego.lower().strip()
 
-    # Repositorio 1: Mapa directo
+    # Repositorio 1: Mapa directo verificado
     for clave, url_directa in IMAGENES_DIRECTAS.items():
         if clave in nombre_lower:
             try:
@@ -112,22 +114,8 @@ def obtener_imagen_base64(nombre_juego, idx_escena=0):
     except Exception as e:
         print(f"[Steam API Error] {e}")
 
-    # Repositorio 3: RAWG API
-    try:
-        busqueda_limpia = re.sub(r'[^\w\s]', '', nombre_juego).strip()
-        url_rawg = f"https://api.rawg.io/api/games?search={requests.utils.quote(busqueda_limpia)}&key=c53a23720ea1477389822e6e3176477d&page_size=1"
-        res = requests.get(url_rawg, timeout=7)
-        if res.status_code == 200:
-            data = res.json()
-            if data.get("results") and data["results"][0].get("background_image"):
-                img_url = data["results"][0]["background_image"]
-                print(f"[RAWG OK] Imagen para: {busqueda_limpia}")
-                return descargar_bytes_a_base64(img_url)
-    except Exception as e:
-        print(f"[RAWG Error] {e}")
-
     fallback_url = FALLBACK_IMAGES[idx_escena % len(FALLBACK_IMAGES)]
-    print(f"[Fallback HD PS4] Fondo para escena #{idx_escena}")
+    print(f"[Fallback PS4 HD] Fondo para escena #{idx_escena}")
     return descargar_bytes_a_base64(fallback_url)
 
 def descargar_musica_fondo():
@@ -153,11 +141,11 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
 <head>
     <meta charset="UTF-8">
     <style>
-        * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
         body {{
             width: 720px;
             height: 1280px;
-            background-color: #0b0f19;
+            background-color: #060911;
             color: #ffffff;
             display: flex;
             flex-direction: column;
@@ -172,7 +160,7 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
             background-image: url('{b64_img}');
             background-size: cover;
             background-position: center;
-            filter: blur(28px) brightness(0.35);
+            filter: blur(30px) brightness(0.30);
             z-index: 1;
             transform: scale(1.08);
         }}
@@ -185,45 +173,45 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
             justify-content: space-between;
         }}
         .header {{
-            background: rgba(15, 23, 42, 0.92);
+            background: rgba(15, 23, 42, 0.94);
             border: 2px solid #00d2ff;
             border-radius: 20px;
-            padding: 12px 18px;
+            padding: 14px 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 16px;
-            box-shadow: 0 0 25px rgba(0, 210, 255, 0.5);
+            box-shadow: 0 0 25px rgba(0, 210, 255, 0.6);
             backdrop-filter: blur(12px);
         }}
         .brand-avatar {{
-            width: 62px;
-            height: 62px;
+            width: 65px;
+            height: 65px;
             border-radius: 50%;
             border: 2px solid #00d2ff;
             box-shadow: 0 0 15px rgba(0, 210, 255, 0.8);
             object-fit: cover;
         }}
         .header-info {{ text-align: left; }}
-        .brand {{ font-size: 32px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; line-height: 1; }}
-        .sub-brand {{ font-size: 15px; color: #ffc800; font-weight: 700; margin-top: 4px; letter-spacing: 1px; }}
+        .brand {{ font-size: 34px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; line-height: 1; }}
+        .sub-brand {{ font-size: 16px; color: #ffc800; font-weight: 800; margin-top: 4px; letter-spacing: 1px; }}
 
         .main-card {{
-            background: rgba(15, 23, 42, 0.94);
+            background: rgba(15, 23, 42, 0.95);
             border: 2px solid #00d2ff;
             border-radius: 24px;
-            padding: 20px 16px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.85);
+            padding: 22px 18px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.9);
             backdrop-filter: blur(15px);
             text-align: center;
             display: flex;
             flex-direction: column;
             align-items: center;
         }}
-        .category-title {{ font-size: 20px; font-weight: 800; color: #a5f3fc; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 1px; }}
-        .item-number {{ display: inline-block; background: #00d2ff; color: #0b0f19; font-size: 19px; font-weight: 900; padding: 4px 14px; border-radius: 10px; margin-bottom: 10px; }}
+        .category-title {{ font-size: 22px; font-weight: 800; color: #a5f3fc; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px; }}
+        .item-number {{ display: inline-block; background: #00d2ff; color: #0b0f19; font-size: 21px; font-weight: 900; padding: 5px 16px; border-radius: 10px; margin-bottom: 12px; }}
 
-        /* ÁREA VISUAL GIGANTE CENTRADA PARA PANTALLAS DE CELULAR */
+        /* CONTENEDOR VISUAL HD CENTRADO */
         .game-banner-box {{
             width: 100%;
             height: 420px;
@@ -231,8 +219,8 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
             overflow: hidden;
             border: 3px solid #00d2ff;
             box-shadow: 0 0 25px rgba(0, 210, 255, 0.5);
-            background: rgba(5, 10, 20, 0.9);
-            margin-bottom: 12px;
+            background: #020617;
+            margin-bottom: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -244,19 +232,20 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
             object-position: center;
         }}
 
-        .item-title {{ font-size: 28px; font-weight: 900; color: #ffffff; text-transform: uppercase; line-height: 1.2; text-shadow: 0 0 12px rgba(0,210,255,0.6); margin-bottom: 6px; }}
-        .item-desc {{ font-size: 19px; font-weight: 600; color: #fde047; line-height: 1.3; }}
+        /* LETRAS GRANDES Y LEGIBLES PARA PANTALLA DE CELULAR */
+        .item-title {{ font-size: 34px; font-weight: 900; color: #ffffff; text-transform: uppercase; line-height: 1.15; text-shadow: 0 0 14px rgba(0,210,255,0.7); margin-bottom: 8px; }}
+        .item-desc {{ font-size: 22px; font-weight: 700; color: #ffe600; line-height: 1.3; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }}
 
         .cta-box {{
             background: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);
             border-radius: 20px;
-            padding: 16px;
+            padding: 18px;
             text-align: center;
             color: #0b0f19;
-            box-shadow: 0 0 30px rgba(0, 210, 255, 0.6);
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.7);
         }}
-        .cta-title {{ font-size: 25px; font-weight: 900; letter-spacing: 1px; }}
-        .cta-desc {{ font-size: 17px; font-weight: 800; margin-top: 2px; opacity: 0.95; }}
+        .cta-title {{ font-size: 27px; font-weight: 900; letter-spacing: 1px; }}
+        .cta-desc {{ font-size: 19px; font-weight: 800; margin-top: 2px; opacity: 0.95; }}
     </style>
 </head>
 <body>
@@ -298,12 +287,12 @@ def renderizar_html_a_png(archivo_html, archivo_png):
         page.screenshot(path=archivo_png)
         browser.close()
 
-def crear_clip_subtitulo_limpio(texto_frase, duracion_frase, ancho=720, alto=160):
+def crear_clip_subtitulo_limpio(texto_frase, duracion_frase, ancho=720, alto=180):
     img = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
     try:
-        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 32)
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 38)
     except:
         font = ImageFont.load_default()
 
@@ -312,18 +301,18 @@ def crear_clip_subtitulo_limpio(texto_frase, duracion_frase, ancho=720, alto=160
     current_line = []
     for word in words:
         current_line.append(word)
-        if len(" ".join(current_line)) > 22:
+        if len(" ".join(current_line)) > 18:
             lines.append(" ".join(current_line[:-1]))
             current_line = [word]
     if current_line:
         lines.append(" ".join(current_line))
 
-    y_offset = (alto - (len(lines) * 40)) // 2
+    y_offset = (alto - (len(lines) * 44)) // 2
     for line in lines:
-        for dx, dy in [(-3,-3), (3,-3), (-3,3), (3,3), (-3,0), (3,0), (0,-3), (0,3)]:
+        for dx, dy in [(-4,-4), (4,-4), (-4,4), (4,4), (-4,0), (4,0), (0,-4), (0,4)]:
             draw.text((ancho // 2 + dx, y_offset + dy), line, fill=(0, 0, 0, 255), anchor="mm", font=font)
-        draw.text((ancho // 2, y_offset), line, fill=(255, 235, 0, 255), anchor="mm", font=font)
-        y_offset += 40
+        draw.text((ancho // 2, y_offset), line, fill=(255, 230, 0, 255), anchor="mm", font=font)
+        y_offset += 44
 
     nombre_temp = f"sub_{abs(hash(texto_frase))}.png"
     img.save(nombre_temp)
@@ -357,7 +346,7 @@ def generar_subtitulos_escena(texto_escena, duracion_escena):
         duracion_frase = duracion_escena * proporcion
         
         clip, temp_file = crear_clip_subtitulo_limpio(frase, duracion_frase)
-        clip = clip.set_start(tiempo_actual).set_position(("center", 900))
+        clip = clip.set_start(tiempo_actual).set_position(("center", 920))
         
         clips_subtitulos.append(clip)
         archivos_temp.append(temp_file)
@@ -379,8 +368,7 @@ def procesar_escena_individual(idx, sup_title, badge, main_title, detail, locuci
     renderizar_html_a_png(html_file, png_file)
 
     clip_base = ImageClip(png_file).set_duration(duracion)
-    # Movimiento dinámico de cámara sobre la plantilla
-    clip_anim = clip_base.resize(lambda t: 1 + 0.04 * (t / duracion)).set_position(('center', 'center'))
+    clip_anim = clip_base.resize(lambda t: 1 + 0.03 * (t / duracion)).set_position(('center', 'center'))
 
     subs_escena, temp_subs = generar_subtitulos_escena(locucion, duracion)
     video_escena = CompositeVideoClip([clip_anim] + subs_escena, size=(720, 1280)).set_audio(audio_clip)
@@ -402,7 +390,7 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     print("1. Renderizando Gancho Inicial...")
     clip_gancho = procesar_escena_individual(
         0, titulo_general, "⚡ ATENCIÓN GAMERS PS4 ⚡", gancho_tit, 
-        "Flasheo profesional y carga de catálogo completo", gancho_loc, "playstation 4 console", archivos_temporales
+        "Flasheo profesional y carga de catálogo completo", gancho_loc, "playstation 4 dualshock controller", archivos_temporales
     )
     clips_completos.append(clip_gancho)
 
@@ -422,7 +410,7 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     print("3. Renderizando Escena Final de Cierre (CTA)...")
     clip_cierre = procesar_escena_individual(
         99, titulo_general, "💬 ESCRÍBENOS AL PRIVADO", cierre_tit, 
-        "Cotiza tu flasheo y catálogo de juegos", cierre_loc, "playstation 4 controller neon", archivos_temporales
+        "Cotiza tu flasheo y catálogo de juegos", cierre_loc, "playstation 4 dualshock controller", archivos_temporales
     )
     clips_completos.append(clip_cierre)
 
