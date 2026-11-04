@@ -1,0 +1,38 @@
+name: Publicador Semanal TikTok
+
+on:
+  schedule:
+    # Se ejecuta automáticamente todos los lunes a las 14:00 UTC
+    - cron: '0 14 * * 1'
+  workflow_dispatch: # Te permite ejecutarlo manualmente cuando quieras
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Descargar código del repositorio
+      uses: actions/checkout@v3
+
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Instalar FFmpeg y Fuentes tipográficas
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg ttf-dejavu
+
+    - name: Instalar librerías de Python
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Ejecutar Agente de Noticias
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: |
+        python main.py
