@@ -6,24 +6,29 @@ def generar_guion(noticias):
     texto_noticias = "\n".join([f"- {n['titulo']}: {n['resumen']}" for n in noticias[:10]])
 
     prompt = f"""
-    Eres el experto técnico del canal @walfedw, especializado en consolas flasheadas/liberadas (PS3, PS4, PS5 y Nintendo Switch).
+    Eres el experto técnico y creador de contenido del canal @walfedw, especializado en consolas flasheadas/liberadas (PS3, PS4, PS5 y Nintendo Switch).
 
-    Aquí tienes las tendencias extraídas de Reddit y la comunidad Scene:
+    Tendencias actuales de la comunidad:
     {texto_noticias}
 
-    INSTRUCCIONES:
-    1. Si hay un tema popular sobre juegos indispensables, exploits de GoldHEN/HEN, emulación o mantenimiento, úsalo.
-    2. Si los temas son vagos, genera un guion sobre: "Los mejores juegos indispensables para aprovechar tu PS4 Flasheada" o "Ventajas de flashear PS4 vs Tenerla Normal".
-    3. Redacta un guion dinámico en ESPAÑOL LATINO (30-40 segundos) con un gran gancho inicial y llamado a la acción final para adquirir juegos, asesoría o mantenimiento con @walfedw.
-    4. Genera una pequeña estructura de texto informativo sobre la consola para mostrarlo en pantalla.
+    INSTRUCCIONES CLAVE:
+    1. PROHIBIDO MENCIONAR VERSIONES NUMÉRICAS DE FIRMWARE (NUNCA digas "11.00", "9.00", "5.05", etc.). Usa siempre términos como "consola flasheada", "consola liberada" o "sistema modificado".
+    2. Enfócate en tops de juegos indispensables, ventajas de tener la consola flasheada vs normal, o consejos de almacenamiento y mantenimiento.
+    3. Redacta un guion dinámico en ESPAÑOL LATINO de 30 a 40 segundos con gancho de alto impacto y llamado a la acción hacia @walfedw.
+    4. Genera una lista corta de 3 a 4 elementos principales que la voz en off mencionará para MOSTRARLOS VISUALMENTE EN PANTALLA.
 
     FORMATO DE SALIDA EXACTO (JSON puro sin markdown):
     {{
-        "guion": "Texto completo que dirá la voz en off",
+        "guion": "Texto completo que dirá la voz en off hablando de la consola flasheada sin números de versión",
         "titulo": "TOP JUEGOS INDISPENSABLES PS4 FLASHEADA",
-        "codigo_pantalla": "HEN 11.00 - GoldHEN Loaded",
-        "hashtags": "#PS4Flasheada #JuegosPS4 #GoldHEN #NintendoSwitch #walfedw",
-        "image_prompt": "ps4 console cyberpunk glowing neon background photorealistic"
+        "elementos_pantalla": [
+            "The Last of Us Part II",
+            "Ghost of Tsushima",
+            "God of War Ragnarök",
+            "Mods y Trucos Exclusivos"
+        ],
+        "hashtags": "#PS4Flasheada #JuegosPS4 #NintendoSwitch #ConsolaFlasheada #walfedw",
+        "image_prompt": "ps4 console gaming room cyberpunk glowing neon lighting 8k photorealistic"
     }}
     """
 
