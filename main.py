@@ -43,24 +43,23 @@ def main():
         print("No se encontraron noticias.")
         return
 
-    print("2. Generando guion enfocado en consolas flasheadas...")
+    print("2. Generando guion y desglose de escenas...")
     datos = generar_guion(noticias)
 
-    elementos_pantalla = datos.get("elementos_pantalla", ["Juegos Gratuitos", "Mantenimiento Preventivo", "Mods Exclusivos"])
-    prompt_imagen = datos.get("image_prompt", "ps4 console hardware neon")
+    titulo_general = datos.get("titulo_general", "TOP CONSOLAS FLASHEADAS")
+    escenas = datos.get("escenas", [])
 
-    print("3. Renderizando video con elementos visuales dinámicos...")
+    print("3. Renderizando video con múltiples escenas dinámicas...")
     archivo_video = crear_video(
         datos["guion"], 
-        datos["titulo"], 
-        elementos_pantalla, 
-        prompt_imagen
+        titulo_general, 
+        escenas
     )
 
     print("4. Enviando el video a Telegram...")
     enviar_a_telegram(
         archivo_video, 
-        datos["titulo"], 
+        titulo_general, 
         datos["guion"], 
         datos["hashtags"]
     )
