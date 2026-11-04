@@ -1,4 +1,5 @@
 import json
+import time
 import requests
 
 def generar_guion(noticias):
@@ -6,46 +7,54 @@ def generar_guion(noticias):
 
     prompt = f"""
     Eres el experto técnico y creador de contenido de @walfedw, canal especializado en:
-    - Flasheo, Liberación, Homebrew, HEN, GoldHEN, Atmosphere y Custom Firmwares.
-    - Servicio técnico, mantenimiento preventivo y solución de sobrecalentamiento.
-    - Comparativas y recomendaciones prácticas (ejemplo: PS4 Liberada vs PS4 Normal, ventajas de flashear PS3/Switch, etc.).
-    - Consolas objetivo: PS3, PS4, PS5 y Nintendo Switch.
+    - Novedades de la Scene/Homebrew (mencionando desarrollos de referentes como NanospeedGamer, TheWizWiki, GoldHEN, HEN, Atmosphere).
+    - Flasheo, liberación y Custom Firmwares para PS3, PS4, PS5 y Nintendo Switch.
+    - Consejos sobre si conviene una consola liberada vs original, catálogo de juegos y mantenimiento preventivo.
 
-    Aquí tienes las últimas publicaciones encontradas:
+    Aquí tienes las últimas novedades recopiladas:
     {texto_noticias}
 
     INSTRUCCIONES:
-    1. Si hay novedades sobre Scene, explotaciones de firmware, actualizaciones o Homebrew en las noticias, úsalas.
-    2. Si las noticias son genéricas (como lanzamientos de juegos o rumores de GTA 6), IG NÓRALAS y crea un tema educativo/comercial propio de alta conversión sobre flasheo, liberación, rendimiento o mantenimiento para PS3, PS4, PS5 o Switch.
-    3. Redacta un guion en ESPAÑOL LATINO de 30 a 40 segundos con gancho alto, explicación clara y un llamado a la acción final hacia @walfedw para asesoría, juegos y servicio técnico.
-    4. Genera un prompt de imagen en INGLÉS enfocado en hardware de consolas, chips, modificación o luces neón.
+    1. Si hay novedades sobre GoldHEN, exploiteo de PS4/PS5, avances de NanospeedGamer/TheWizWiki o Scene, úsalas como tema principal.
+    2. Si los textos recopilados son genéricos, genera un tema educativo/comercial propio sobre ventajas de flashear PS3/PS4/PS5/Switch o comparativas de rendimiento.
+    3. Redacta un guion en ESPAÑOL LATINO de 30 a 40 segundos con gancho de alto impacto y llamado a la acción hacia @walfedw para asesoría, juegos y servicio técnico.
+    4. Genera un prompt de imagen en INGLÉS enfocado en chips de consolas, luces neón o modificación de hardware.
 
     FORMATO DE SALIDA EXACTO (Devuelve ÚNICAMENTE un JSON válido sin markdown):
     {{
-        "guion": "Texto del guion para la voz en off con llamado a la acción para consultar con @walfedw",
+        "guion": "Texto del guion para la voz en off con llamado a la acción hacia @walfedw",
         "titulo": "Título atractivo para TikTok",
-        "hashtags": "#PS4Flasheada #PS5 #NintendoSwitch #Homebrew #ServicioTecnico #walfedw",
+        "hashtags": "#PS4Flasheada #PS5Jailbreak #GoldHEN #NintendoSwitch #ServicioTecnico #walfedw",
         "image_prompt": "gaming console motherboard chip modding dark neon lighting hd"
     }}
     """
 
-    print("Generando guion enfocado en Flasheo, Homebrew y Mantenimiento...")
+    print("Generando guion con reintentos y tolerancia a tiempo de espera...")
     url = "https://text.pollinations.ai/"
     payload = {
         "messages": [{"role": "user", "content": prompt}],
         "jsonMode": True
     }
 
-    response = requests.post(url, json=payload, timeout=30)
-    texto_respuesta = response.text.strip()
+    # Intentar hasta 3 veces con timeout amplio
+    for intento in range(1, 4):
+        try:
+            print(f"Intento {intento} enviando solicitud a la IA...")
+            response = requests.post(url, json=payload, timeout=60)
+            if response.status_code == 200:
+                texto_respuesta = response.text.strip()
+                if "```json" in texto_respuesta:
+                    texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
+                elif "```" in texto_respuesta:
+                    texto_respuesta = texto_respuesta.split("```")[1].split("```")[0].strip()
 
-    if "```json" in texto_respuesta:
-        texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
-    elif "```" in texto_respuesta:
-        texto_respuesta = texto_respuesta.split("```")[1].split("```")[0].strip()
+                datos = json.loads(texto_respuesta)
+                return datos
+        except Exception as e:
+            print(f"Advertencia en intento {intento}: {e}")
+            time.sleep(3)
 
-    datos = json.loads(texto_respuesta)
-    return datos
+    raise RuntimeError("No se pudo obtener respuesta del generador de texto tras 3 intentos.")
 
 if __name__ == "__main__":
     from rss_reader import obtener_noticias
