@@ -172,7 +172,6 @@ def crear_clip_subtitulo(texto_frase, duracion_frase, ancho=720, alto=160):
     img = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Caja de subtítulo neón estilo TikTok
     draw.rounded_rectangle([20, 10, ancho - 20, alto - 10], radius=16, fill=(10, 15, 30, 230), outline=(0, 210, 255, 255), width=2)
 
     try:
@@ -180,7 +179,6 @@ def crear_clip_subtitulo(texto_frase, duracion_frase, ancho=720, alto=160):
     except:
         font = ImageFont.load_default()
 
-    # Formatear la frase en líneas cortas
     words = texto_frase.split()
     lines = []
     current_line = []
