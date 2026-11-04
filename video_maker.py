@@ -1,6 +1,6 @@
 import PIL.Image
 
-# Parche de compatibilidad para versiones de MoviePy con Pillow
+# Parche de compatibilidad para MoviePy y versiones recientes de Pillow
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = getattr(PIL.Image, 'LANCZOS', getattr(PIL.Image, 'BICUBIC', None))
 
@@ -44,120 +44,113 @@ def descargar_url_imagen(prompt_ingles):
 def generar_base_html(titulo, codigo_pantalla, prompt_img):
     url_bg = descargar_url_imagen(prompt_img)
     
-    html_content = f"""<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <style>
-        * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
-        body {{
-            width: 720px;
-            height: 1280px;
-            background-color: #0b0f19;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 45px 35px;
-            position: relative;
-            overflow: hidden;
-        }}
-        .bg-image {{
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-image: url('{url_bg}');
-            background-size: cover;
-            background-position: center;
-            filter: blur(10px) brightness(0.30);
-            z-index: 1;
-        }}
-        .container {{
-            position: relative;
-            z-index: 2;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            justify-content: space-between;
-        }}
-        .header {{
-            background: rgba(15, 23, 42, 0.80);
-            border: 2px solid #00d2ff;
-            border-radius: 20px;
-            padding: 18px;
-            text-align: center;
-            box-shadow: 0 0 25px rgba(0, 210, 255, 0.4);
-            backdrop-filter: blur(12px);
-        }}
-        .brand {{ font-size: 38px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; }}
-        .sub-brand {{ font-size: 19px; color: #ffc800; font-weight: 700; margin-top: 6px; }}
-
-        .main-card {{
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(0, 210, 255, 0.5);
-            border-radius: 24px;
-            padding: 28px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
-            backdrop-filter: blur(15px);
-        }}
-        .title {{ font-size: 30px; font-weight: 800; color: #ffffff; margin-bottom: 20px; line-height: 1.3; text-transform: uppercase; }}
-        
-        .code-box {{
-            background: #050811;
-            border-left: 4px solid #00d2ff;
-            border-radius: 10px;
-            padding: 16px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 19px;
-            color: #a5f3fc;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
-        }}
-
-        .subtitles-space {{
-            height: 180px;
-        }}
-
-        .cta-box {{
-            background: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);
-            border-radius: 20px;
-            padding: 20px;
-            text-align: center;
-            color: #0b0f19;
-            box-shadow: 0 0 30px rgba(0, 210, 255, 0.6);
-        }}
-        .cta-title {{ font-size: 28px; font-weight: 900; letter-spacing: 1px; }}
-        .cta-desc {{ font-size: 19px; font-weight: 800; margin-top: 4px; opacity: 0.95; }}
-    </style>
-</head>
-<body>
-    <div class="bg-image"></div>
-    <div class="container">
-        <div class="header">
-            <div class="brand">@WALFEDW</div>
-            <div class="sub-brand">⚡ FLASHEO • JUEGOS • SERVICIO TÉCNICO ⚡</div>
-        </div>
-
-        <div class="main-card">
-            <div class="title">{titulo}</div>
-            <div class="code-box">
-                <span style="color:#f43f5e">console_status</span> {<br>
-                  <span style="color:#38bdf8">mode</span>: <span style="color:#fde047">"HEN / GoldHEN"</span>;<br>
-                  <span style="color:#38bdf8">service</span>: <span style="color:#4ade80">"Juegos + Mantenimiento"</span>;<br>
-                }
-            </div>
-        </div>
-
-        <div class="subtitles-space"></div>
-
-        <div class="cta-box">
-            <div class="cta-title">PS3 • PS4 • PS5 • SWITCH</div>
-            <div class="cta-desc">¡Escríbenos para Asesoría y Catálogo!</div>
-        </div>
-    </div>
-</body>
-</html>"""
+    html_lines = [
+        "<!DOCTYPE html>",
+        "<html lang='es'>",
+        "<head>",
+        "    <meta charset='UTF-8'>",
+        "    <style>",
+        "        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }",
+        "        body {",
+        "            width: 720px;",
+        "            height: 1280px;",
+        "            background-color: #0b0f19;",
+        "            color: #ffffff;",
+        "            display: flex;",
+        "            flex-direction: column;",
+        "            justify-content: space-between;",
+        "            padding: 45px 35px;",
+        "            position: relative;",
+        "            overflow: hidden;",
+        "        }",
+        "        .bg-image {",
+        "            position: absolute;",
+        "            top: 0; left: 0; width: 100%; height: 100%;",
+        f"           background-image: url('{url_bg}');",
+        "            background-size: cover;",
+        "            background-position: center;",
+        "            filter: blur(10px) brightness(0.30);",
+        "            z-index: 1;",
+        "        }",
+        "        .container {",
+        "            position: relative;",
+        "            z-index: 2;",
+        "            display: flex;",
+        "            flex-direction: column;",
+        "            height: 100%;",
+        "            justify-content: space-between;",
+        "        }",
+        "        .header {",
+        "            background: rgba(15, 23, 42, 0.80);",
+        "            border: 2px solid #00d2ff;",
+        "            border-radius: 20px;",
+        "            padding: 18px;",
+        "            text-align: center;",
+        "            box-shadow: 0 0 25px rgba(0, 210, 255, 0.4);",
+        "            backdrop-filter: blur(12px);",
+        "        }",
+        "        .brand { font-size: 38px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; }",
+        "        .sub-brand { font-size: 19px; color: #ffc800; font-weight: 700; margin-top: 6px; }",
+        "        .main-card {",
+        "            background: rgba(15, 23, 42, 0.85);",
+        "            border: 1px solid rgba(0, 210, 255, 0.5);",
+        "            border-radius: 24px;",
+        "            padding: 28px;",
+        "            box-shadow: 0 15px 35px rgba(0,0,0,0.6);",
+        "            backdrop-filter: blur(15px);",
+        "        }",
+        "        .title { font-size: 30px; font-weight: 800; color: #ffffff; margin-bottom: 20px; line-height: 1.3; text-transform: uppercase; }",
+        "        .code-box {",
+        "            background: #050811;",
+        "            border-left: 4px solid #00d2ff;",
+        "            border-radius: 10px;",
+        "            padding: 16px;",
+        "            font-family: 'Courier New', monospace;",
+        "            font-size: 19px;",
+        "            color: #a5f3fc;",
+        "            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);",
+        "        }",
+        "        .subtitles-space { height: 180px; }",
+        "        .cta-box {",
+        "            background: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);",
+        "            border-radius: 20px;",
+        "            padding: 20px;",
+        "            text-align: center;",
+        "            color: #0b0f19;",
+        "            box-shadow: 0 0 30px rgba(0, 210, 255, 0.6);",
+        "        }",
+        "        .cta-title { font-size: 28px; font-weight: 900; letter-spacing: 1px; }",
+        "        .cta-desc { font-size: 19px; font-weight: 800; margin-top: 4px; opacity: 0.95; }",
+        "    </style>",
+        "</head>",
+        "<body>",
+        "    <div class='bg-image'></div>",
+        "    <div class='container'>",
+        "        <div class='header'>",
+        "            <div class='brand'>@WALFEDW</div>",
+        "            <div class='sub-brand'>FLASHEO - JUEGOS - SERVICIO TECNICO</div>",
+        "        </div>",
+        "        <div class='main-card'>",
+        f"           <div class='title'>{titulo}</div>",
+        "            <div class='code-box'>",
+        "                <span style='color:#f43f5e'>console_status</span> {<br>",
+        "                  <span style='color:#38bdf8'>mode</span>: <span style='color:#fde047'>\"HEN / GoldHEN\"</span>;<br>",
+        "                  <span style='color:#38bdf8'>service</span>: <span style='color:#4ade80'>\"Juegos + Mantenimiento\"</span>;<br>",
+        "                }",
+        "            </div>",
+        "        </div>",
+        "        <div class='subtitles-space'></div>",
+        "        <div class='cta-box'>",
+        "            <div class='cta-title'>PS3 - PS4 - PS5 - SWITCH</div>",
+        "            <div class='cta-desc'>Escribenos para Asesoria y Catalogo</div>",
+        "        </div>",
+        "    </div>",
+        "</body>",
+        "</html>"
+    ]
     
     with open("template.html", "w", encoding="utf-8") as f:
-        f.write(html_content)
+        f.write("\n".join(html_lines))
 
 def renderizar_html_a_imagen():
     with sync_playwright() as p:
