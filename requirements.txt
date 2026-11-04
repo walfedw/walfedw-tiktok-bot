@@ -1,0 +1,6 @@
+feedparser==6.0.11
+google-genai==0.1.1
+edge-tts==6.1.12
+moviepy==1.0.3
+requests==2.31.0
+pillow==10.3.0
