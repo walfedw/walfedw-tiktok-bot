@@ -1,6 +1,5 @@
 feedparser
-google-genai
 edge-tts
 moviepy==1.0.3
 requests
-pillow
+Pillow==9.5.0
