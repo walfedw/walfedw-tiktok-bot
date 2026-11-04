@@ -12,7 +12,7 @@ import requests
 import edge_tts
 from playwright.sync_api import sync_playwright
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
+from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips
 
 VOCES = ["es-MX-DarianNeural", "es-MX-JorgeNeural", "es-ES-AlvaroNeural"]
 
@@ -36,23 +36,13 @@ async def generar_audio(texto, archivo_salida="voz.mp3"):
 
 def descargar_url_imagen(prompt_ingles):
     try:
-        prompt_enc = urllib.parse.quote(prompt_ingles + " gaming console hardware dark neon light 8k")
+        prompt_enc = urllib.parse.quote(prompt_ingles + " 8k high quality photorealistic")
         return f"https://image.pollinations.ai/prompt/{prompt_enc}?width=720&height=1280&nologo=true&seed=42"
     except:
         return "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=720&h=1280&fit=crop"
 
-def generar_base_html(titulo, elementos_pantalla, prompt_img):
+def generar_html_escena(titulo_general, item_nombre, item_detalle, num_escena, prompt_img, nombre_salida_html):
     url_bg = descargar_url_imagen(prompt_img)
-    
-    # Generar tarjetas dinámicas para cada elemento
-    items_html = ""
-    for idx, item in enumerate(elementos_pantalla, 1):
-        items_html += f"""
-        <div class="item-card">
-            <div class="item-badge">#{idx}</div>
-            <div class="item-text">{item}</div>
-        </div>
-        """
     
     html_lines = [
         "<!DOCTYPE html>",
@@ -79,7 +69,7 @@ def generar_base_html(titulo, elementos_pantalla, prompt_img):
         f"           background-image: url('{url_bg}');",
         "            background-size: cover;",
         "            background-position: center;",
-        "            filter: blur(8px) brightness(0.28);",
+        "            filter: brightness(0.40);",
         "            z-index: 1;",
         "        }",
         "        .container {",
@@ -103,37 +93,18 @@ def generar_base_html(titulo, elementos_pantalla, prompt_img):
         "        .sub-brand { font-size: 18px; color: #ffc800; font-weight: 700; margin-top: 4px; }",
         
         "        .main-card {",
-        "            background: rgba(15, 23, 42, 0.85);",
-        "            border: 1px solid rgba(0, 210, 255, 0.5);",
+        "            background: rgba(15, 23, 42, 0.90);",
+        "            border: 2px solid #00d2ff;",
         "            border-radius: 24px;",
-        "            padding: 24px;",
-        "            box-shadow: 0 15px 35px rgba(0,0,0,0.6);",
+        "            padding: 30px 24px;",
+        "            box-shadow: 0 15px 35px rgba(0,0,0,0.8);",
         "            backdrop-filter: blur(15px);",
+        "            text-align: center;",
         "        }",
-        "        .title { font-size: 28px; font-weight: 900; color: #ffffff; margin-bottom: 20px; text-transform: uppercase; text-align: center; border-bottom: 2px solid #00d2ff; padding-bottom: 12px; }",
-        
-        "        .items-container { display: flex; flex-direction: column; gap: 14px; }",
-        "        .item-card {",
-        "            display: flex;",
-        "            align-items: center;",
-        "            background: rgba(30, 41, 59, 0.9);",
-        "            border: 1px solid rgba(0, 210, 255, 0.4);",
-        "            border-radius: 14px;",
-        "            padding: 14px 18px;",
-        "            box-shadow: 0 4px 15px rgba(0,0,0,0.3);",
-        "        }",
-        "        .item-badge {",
-        "            background: #00d2ff;",
-        "            color: #0b0f19;",
-        "            font-weight: 900;",
-        "            font-size: 20px;",
-        "            padding: 6px 12px;",
-        "            border-radius: 10px;",
-        "            margin-right: 15px;",
-        "        }",
-        "        .item-text { font-size: 22px; font-weight: 700; color: #f8fafc; }",
-
-        "        .subtitles-space { height: 170px; }",
+        "        .category-title { font-size: 24px; font-weight: 800; color: #a5f3fc; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }",
+        "        .item-number { display: inline-block; background: #00d2ff; color: #0b0f19; font-size: 22px; font-weight: 900; padding: 6px 16px; border-radius: 12px; margin-bottom: 15px; }",
+        "        .item-title { font-size: 34px; font-weight: 900; color: #ffffff; text-transform: uppercase; line-height: 1.2; text-shadow: 0 0 10px rgba(0,210,255,0.5); margin-bottom: 12px; }",
+        "        .item-desc { font-size: 22px; font-weight: 600; color: #fde047; line-height: 1.4; }",
 
         "        .cta-box {",
         "            background: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);",
@@ -155,12 +126,11 @@ def generar_base_html(titulo, elementos_pantalla, prompt_img):
         "            <div class='sub-brand'>CONSOLAS FLASHEADAS - JUEGOS - MANTENIMIENTO</div>",
         "        </div>",
         "        <div class='main-card'>",
-        f"           <div class='title'>{titulo}</div>",
-        "            <div class='items-container'>",
-        f"               {items_html}",
-        "            </div>",
+        f"           <div class='category-title'>{titulo_general}</div>",
+        f"           <div class='item-number'>OPCIÓN #{num_escena}</div>",
+        f"           <div class='item-title'>{item_nombre}</div>",
+        f"           <div class='item-desc'>{item_detalle}</div>",
         "        </div>",
-        "        <div class='subtitles-space'></div>",
         "        <div class='cta-box'>",
         "            <div class='cta-title'>PS3 - PS4 - PS5 - SWITCH</div>",
         "            <div class='cta-desc'>Escribenos para Asesoria y Catalogo</div>",
@@ -170,26 +140,25 @@ def generar_base_html(titulo, elementos_pantalla, prompt_img):
         "</html>"
     ]
     
-    with open("template.html", "w", encoding="utf-8") as f:
+    with open(nombre_salida_html, "w", encoding="utf-8") as f:
         f.write("\n".join(html_lines))
 
-def renderizar_html_a_imagen():
+def renderizar_html_a_png(archivo_html, archivo_png):
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": 720, "height": 1280})
-        ruta_absoluta = os.path.abspath("template.html")
+        ruta_absoluta = os.path.abspath(archivo_html)
         page.goto(f"file://{ruta_absoluta}")
-        page.screenshot(path="fondo_pantalla.png")
+        page.screenshot(path=archivo_png)
         browser.close()
 
-def crear_clip_subtitulo(texto_frase, duracion_frase, ancho=720, alto=160):
+def crear_clip_subtitulo_limpio(texto_frase, duracion_frase, ancho=720, alto=160):
+    # Genera subtítulo flotante transparente SIN cajas grandes
     img = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    draw.rounded_rectangle([20, 10, ancho - 20, alto - 10], radius=16, fill=(10, 15, 30, 235), outline=(0, 210, 255, 255), width=2)
-
     try:
-        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 32)
     except:
         font = ImageFont.load_default()
 
@@ -198,17 +167,20 @@ def crear_clip_subtitulo(texto_frase, duracion_frase, ancho=720, alto=160):
     current_line = []
     for word in words:
         current_line.append(word)
-        if len(" ".join(current_line)) > 25:
+        if len(" ".join(current_line)) > 22:
             lines.append(" ".join(current_line[:-1]))
             current_line = [word]
     if current_line:
         lines.append(" ".join(current_line))
 
-    y_offset = (alto - (len(lines) * 36)) // 2
+    y_offset = (alto - (len(lines) * 40)) // 2
     for line in lines:
-        draw.text((ancho // 2 + 2, y_offset + 2), line, fill=(0, 0, 0, 255), anchor="mm", font=font)
-        draw.text((ancho // 2, y_offset), line, fill=(255, 230, 0, 255), anchor="mm", font=font)
-        y_offset += 36
+        # Borde negro grueso alrededor del texto para máxima legibilidad
+        for dx, dy in [(-3,-3), (3,-3), (-3,3), (3,3), (-3,0), (3,0), (0,-3), (0,3)]:
+            draw.text((ancho // 2 + dx, y_offset + dy), line, fill=(0, 0, 0, 255), anchor="mm", font=font)
+        # Texto principal amarillo neón
+        draw.text((ancho // 2, y_offset), line, fill=(255, 235, 0, 255), anchor="mm", font=font)
+        y_offset += 40
 
     nombre_temp = f"sub_{abs(hash(texto_frase))}.png"
     img.save(nombre_temp)
@@ -223,7 +195,7 @@ def generar_subtitulos_dinamicos(guion_texto, duracion_total):
     
     for p in palabras:
         chunk.append(p)
-        if len(chunk) >= 5 or p.endswith(('.', '?', '!')):
+        if len(chunk) >= 4 or p.endswith(('.', '?', '!')):
             frases.append(" ".join(chunk))
             chunk = []
     if chunk:
@@ -241,8 +213,9 @@ def generar_subtitulos_dinamicos(guion_texto, duracion_total):
         proporcion = len(frase) / total_chars
         duracion_frase = duracion_total * proporcion
         
-        clip, temp_file = crear_clip_subtitulo(frase, duracion_frase)
-        clip = clip.set_start(tiempo_actual).set_position(("center", 830))
+        clip, temp_file = crear_clip_subtitulo_limpio(frase, duracion_frase)
+        # Posición flotante limpia en la zona inferior libre
+        clip = clip.set_start(tiempo_actual).set_position(("center", 900))
         
         clips_subtitulos.append(clip)
         archivos_temp.append(temp_file)
@@ -250,28 +223,57 @@ def generar_subtitulos_dinamicos(guion_texto, duracion_total):
 
     return clips_subtitulos, archivos_temp
 
-def crear_video(guion_texto, titulo_texto, elementos_pantalla=[], prompt_img="gaming console hardware", archivo_salida="noticia_tiktok.mp4"):
-    print("1. Generando locución...")
+def crear_video(guion_texto, titulo_general, escenas=[], archivo_salida="noticia_tiktok.mp4"):
+    print("1. Generando voz en off...")
     asyncio.run(generar_audio(guion_texto, "voz.mp3"))
 
-    print("2. Generando render de pantalla HTML5 con tarjetas de contenido...")
-    generar_base_html(titulo_texto, elementos_pantalla, prompt_img)
-    renderizar_html_a_imagen()
-
-    print("3. Generando subtítulos dinámicos sincronizados...")
     audio = AudioFileClip("voz.mp3")
-    duracion = audio.duration
+    duracion_total = audio.duration
 
-    clip_base = ImageClip("fondo_pantalla.png").set_duration(duracion)
-    clip_animado = clip_base.resize(lambda t: 1 + 0.03 * (t / duracion))
-    clip_animado = clip_animado.set_position(('center', 'center')).set_duration(duracion)
+    if not escenas:
+        escenas = [
+            {"item": "Consolas Liberadas", "detalle": "Catálogo completo de juegos", "image_prompt": "ps4 console neon"},
+            {"item": "Servicio Técnico", "detalle": "Mantenimiento profesional", "image_prompt": "tech repair motherboard"}
+        ]
 
-    clips_sub, archivos_temp = generar_subtitulos_dinamicos(guion_texto, duracion)
+    num_escenas = len(escenas)
+    duracion_por_escena = duracion_total / num_escenas
 
-    lista_capas = [clip_animado] + clips_sub
+    print(f"2. Generando {num_escenas} escenas visuales con imágenes específicas...")
+    clips_escenas = []
+    archivos_escenas_temp = []
+
+    for idx, esc in enumerate(escenas, 1):
+        html_filename = f"escena_{idx}.html"
+        png_filename = f"escena_{idx}.png"
+        
+        generar_html_escena(
+            titulo_general, 
+            esc.get("item", f"Opción #{idx}"), 
+            esc.get("detalle", ""), 
+            idx, 
+            esc.get("image_prompt", "gaming console"), 
+            html_filename
+        )
+        renderizar_html_a_png(html_filename, png_filename)
+        
+        # Clip de imagen con leve zoom
+        clip_img = ImageClip(png_filename).set_duration(duracion_por_escena)
+        clip_anim = clip_img.resize(lambda t: 1 + 0.03 * (t / duracion_por_escena)).set_position(('center', 'center'))
+        
+        clips_escenas.append(clip_anim)
+        archivos_escenas_temp.extend([html_filename, png_filename])
+
+    # Concatenar todas las escenas para formar la secuencia completa
+    video_base = concatenate_videoclips(clips_escenas)
+
+    print("3. Aplicando subtítulos flotantes limpios estilo TikTok...")
+    clips_sub, archivos_sub_temp = generar_subtitulos_dinamicos(guion_texto, duracion_total)
+
+    lista_capas = [video_base] + clips_sub
     video_final = CompositeVideoClip(lista_capas, size=(720, 1280)).set_audio(audio)
 
-    print("4. Renderizando MP4...")
+    print("4. Renderizando video final MP4...")
     video_final.write_videofile(
         archivo_salida,
         fps=24,
@@ -284,7 +286,8 @@ def crear_video(guion_texto, titulo_texto, elementos_pantalla=[], prompt_img="ga
     audio.close()
     video_final.close()
 
-    for f in archivos_temp:
+    # Limpieza de archivos temporales
+    for f in archivos_escenas_temp + archivos_sub_temp:
         if os.path.exists(f):
             try:
                 os.remove(f)
