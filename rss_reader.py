@@ -1,43 +1,45 @@
 import feedparser
-import ssl
+import urllib.parse
 
-# Desactivar verificación estricta de SSL si algún feed da problemas
-if hasattr(ssl, '_create_unverified_context'):
-    ssl._create_default_https_context = ssl._create_unverified_context
-
-# Feeds de la scene, firmware y noticias de consolas
+# Fuentes RSS de la Scene, Homebrew y rastreadores de noticias sobre NanospeedGamer y TheWizWiki
 FEEDS_RSS = [
+    # Noticias directas de Wololo (escena PS4/PS5/Switch/PS3)
     "https://wololo.net/feed/",
-    "https://blog.es.playstation.com/feed/",
-    "https://www.nintenderos.com/feed/",
-    "https://vandal.elespanol.com/xml.cgi",
-    "https://news.google.com/rss/search?q=PS5+PS4+PS3+Switch+firmware+scene+when:7d&hl=es-419&gl=CL&ceid=CL:es-419"
+    
+    # Rastreador de publicaciones/menciones de NanospeedGamer y GoldHEN
+    "https://news.google.com/rss/search?q=" + urllib.parse.quote("NanospeedGamer OR GoldHEN OR PS4 HEN") + "&hl=es-419&gl=PE&ceid=PE:es-419",
+    
+    # Rastreador de novedades de TheWizWiki y Scene PS5/Switch
+    "https://news.google.com/rss/search?q=" + urllib.parse.quote("TheWizWiki OR PS5 Jailbreak OR Atmosphere Switch") + "&hl=es-419&gl=PE&ceid=PE:es-419",
+    
+    # Novedades generales de consolas y liberación
+    "https://news.google.com/rss/search?q=" + urllib.parse.quote("flasheo PS4 OR libera PS5 OR HEN PS3") + "&hl=es-419&gl=PE&ceid=PE:es-419"
 ]
 
 def obtener_noticias():
-    todas_las_noticias = []
-
-    for url in FEEDS_RSS:
+    noticias = []
+    
+    for feed_url in FEEDS_RSS:
         try:
-            feed = feedparser.parse(url)
-            for entrada in feed.entries[:4]:  # Tomar hasta 4 noticias por fuente
-                titulo = entrada.get('title', '')
-                resumen = entrada.get('summary', entrada.get('description', ''))
-                enlace = entrada.get('link', '')
-
-                if titulo:
-                    todas_las_noticias.append({
+            parsed = feedparser.parse(feed_url)
+            for entry in parsed.entries[:5]:
+                titulo = entry.get('title', '')
+                resumen = entry.get('summary', entry.get('description', ''))
+                
+                # Evitar duplicados
+                if not any(n['titulo'] == titulo for n in noticias):
+                    noticias.append({
                         "titulo": titulo,
-                        "resumen": resumen[:300], # Limitar tamaño
-                        "enlace": enlace
+                        "resumen": resumen,
+                        "link": entry.get('link', '')
                     })
         except Exception as e:
-            print(f"Advertencia: No se pudo leer el feed {url}. Error: {e}")
+            print(f"Error al leer feed {feed_url}: {e}")
 
-    return todas_las_noticias
+    print(f"Total de noticias/novedades recolectadas: {len(noticias)}")
+    return noticias
 
 if __name__ == "__main__":
-    noticias = obtener_noticias()
-    print(f"Total noticias recolectadas: {len(noticias)}")
-    for i, n in enumerate(noticias[:3], 1):
+    resultado = obtener_noticias()
+    for i, n in enumerate(resultado[:5], 1):
         print(f"{i}. {n['titulo']}")
