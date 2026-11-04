@@ -41,11 +41,13 @@ def main():
         print("No se encontraron noticias.")
         return
 
-    print("2. Generando guion...")
+    print("2. Generando guion e idea visual...")
     datos = generar_guion(noticias)
 
-    print("3. Renderizando el video...")
-    archivo_video = crear_video(datos["guion"], datos["titulo"])
+    prompt_imagen = datos.get("image_prompt", "gaming console hardware")
+
+    print("3. Renderizando el video profesional...")
+    archivo_video = crear_video(datos["guion"], datos["titulo"], prompt_imagen)
 
     print("4. Enviando el video a Telegram...")
     enviar_a_telegram(
