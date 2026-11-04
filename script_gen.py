@@ -1,14 +1,7 @@
-import os
 import json
-from google import genai
+import requests
 
 def generar_guion(noticias):
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("Error: No se encontró la variable GEMINI_API_KEY")
-
-    client = genai.Client(api_key=api_key)
-
     texto_noticias = "\n".join([f"- {n['titulo']}: {n['resumen']}" for n in noticias[:10]])
 
     prompt = f"""
@@ -35,38 +28,24 @@ def generar_guion(noticias):
     }}
     """
 
-    # Lista de modelos compatibles en orden de preferencia
-    modelos_a_probar = [
-        'gemini-1.5-flash',
-        'gemini-3.8-flash',
-        'gemini-2.0-flash',
-        'gemini-1.5-pro'
-    ]
+    print("Generando guion con el motor de IA...")
+    
+    url = "https://text.pollinations.ai/"
+    payload = {
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "jsonMode": True
+    }
 
-    response = None
-    ultimo_error = None
-
-    for modelo in modelos_a_probar:
-        try:
-            print(f"Intentando generar guion con el modelo: {modelo}...")
-            response = client.models.generate_content(
-                model=modelo,
-                contents=prompt
-            )
-            print(f"¡Éxito utilizando {modelo}!")
-            break
-        except Exception as e:
-            print(f"Modelo {modelo} no disponible: {e}")
-            ultimo_error = e
-
-    if not response:
-        raise RuntimeError(f"No se pudo conectar con ningún modelo de Gemini. Error: {ultimo_error}")
-
+    response = requests.post(url, json=payload, timeout=30)
     texto_respuesta = response.text.strip()
-    if texto_respuesta.startswith("```json"):
-        texto_respuesta = texto_respuesta[7:-3].strip()
-    elif texto_respuesta.startswith("```"):
-        texto_respuesta = texto_respuesta[3:-3].strip()
+
+    # Limpiar formato markdown en caso de ser necesario
+    if "```json" in texto_respuesta:
+        texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
+    elif "```" in texto_respuesta:
+        texto_respuesta = texto_respuesta.split("```")[1].split("```")[0].strip()
 
     datos = json.loads(texto_respuesta)
     return datos
