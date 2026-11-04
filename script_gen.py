@@ -5,60 +5,54 @@ import requests
 
 HISTORIAL_FILE = "historial.json"
 
-# Catálogo exclusivo de juegos reales de PS4 y servicios de flasheo
+# Catálogo verificado de juegos de PS4 con imágenes y locuciones exactas
 CATALOGO_JUEGOS_REALES = [
     {
+        "item": "The Last of Us Part II",
+        "detalle": "Gráficos brutales e historia impactante",
+        "locucion": "En el número uno, The Last of Us Part II. Libera tu PS4 en Walfedw y disfrútalo al máximo.",
+        "busqueda_imagen": "The Last of Us Part 2"
+    },
+    {
         "item": "God of War Ragnarök",
-        "detalle": "Combate brutal a 60 FPS en tu PS4",
-        "locucion": "En el número uno, God of War Ragnarök. Trae tu PS4 a Walfedw, la liberamos e instalamos este juegazo completo.",
+        "detalle": "Combate fluido a 60 FPS en tu PS4",
+        "locucion": "Número dos, God of War Ragnarök. Flashea tu consola con nosotros e instala este juegazo.",
         "busqueda_imagen": "God of War Ragnarok"
     },
     {
+        "item": "Marvel's Spider-Man",
+        "detalle": "Balanceo y acción total por Nueva York",
+        "locucion": "Número tres, Marvel's Spider-Man. Te cargamos el catálogo completo en tu PS4 liberada.",
+        "busqueda_imagen": "Marvels Spider-Man PS4"
+    },
+    {
         "item": "Red Dead Redemption 2",
-        "detalle": "El mundo abierto definitivo para PS4",
-        "locucion": "Número dos, Red Dead Redemption 2. Te flasheamos la consola e instalamos el mapa más detallado de la historia.",
+        "detalle": "El mundo abierto más realista",
+        "locucion": "En el número uno, Red Dead Redemption 2. Trae tu PS4 a Walfedw y te lo instalamos hoy.",
         "busqueda_imagen": "Red Dead Redemption 2"
     },
     {
-        "item": "The Last of Us Part II",
-        "detalle": "Gráficos de infarto y máxima fluidez",
-        "locucion": "Número tres, The Last of Us Part II. Disfruta esta obra maestra liberando tu PS4 con nuestro servicio de software.",
-        "busqueda_imagen": "The Last of Us Part II"
-    },
-    {
         "item": "Grand Theft Auto V",
-        "detalle": "Acción en Los Santos con parches y mods",
-        "locucion": "En el número uno, Grand Theft Auto V. Liberamos tu PS4 para que juegues con catálogo lleno y menús de trucos.",
+        "detalle": "Los Santos con mods y menús de trucos",
+        "locucion": "Número dos, Grand Theft Auto V. Liberamos tu PS4 para que juegues sin pagar demás.",
         "busqueda_imagen": "Grand Theft Auto V"
     },
     {
         "item": "Ghost of Tsushima",
-        "detalle": "Japón feudal a máxima velocidad",
-        "locucion": "Número dos, Ghost of Tsushima. Te asesoramos paso a paso para flashear tu PS4 y cargarte este título.",
+        "detalle": "Combate samurái a máxima velocidad",
+        "locucion": "Número tres, Ghost of Tsushima. Escríbenos al privado para liberar tu consola y cargarlo.",
         "busqueda_imagen": "Ghost of Tsushima"
     },
     {
         "item": "Bloodborne",
-        "detalle": "Exclusivo imprescindible a 60 FPS",
-        "locucion": "Número tres, Bloodborne. Flashea tu PS4 en Walfedw y activa el parche exclusivo de 60 cuadros por segundo.",
+        "detalle": "Exclusivo gótico a 60 FPS",
+        "locucion": "En el número uno, Bloodborne. Activa el parche exclusivo de 60 FPS flasheando tu PS4 en Walfedw.",
         "busqueda_imagen": "Bloodborne"
     },
     {
-        "item": "Elden Ring",
-        "detalle": "Desafío de mundo abierto sin límites",
-        "locucion": "En el número uno, Elden Ring. Libera tu PS4 en Walfedw y juega sin restricciones de cuenta ni compras.",
-        "busqueda_imagen": "Elden Ring"
-    },
-    {
-        "item": "Spider-Man: Miles Morales",
-        "detalle": "Acción frenética por Nueva York",
-        "locucion": "Número dos, Spider-Man Miles Morales. Te instalamos el paquete completo de juegos en tu PS4 flasheada.",
-        "busqueda_imagen": "Marvels Spider Man Miles Morales"
-    },
-    {
         "item": "Resident Evil 4 Remake",
-        "detalle": "Terror y acción redefinidos en PS4",
-        "locucion": "Número tres, Resident Evil 4 Remake. Escríbenos para liberar tu PS4 e instalarle los últimos estrenos.",
+        "detalle": "Terror y acción de última generación",
+        "locucion": "Número dos, Resident Evil 4 Remake. Liberamos tu sistema PS4 con el último software.",
         "busqueda_imagen": "Resident Evil 4 Remake"
     }
 ]
@@ -90,7 +84,8 @@ def generar_guion(noticias):
     string_historial = ", ".join(historial_usados[-30:]) if historial_usados else "Ninguno aún"
 
     prompt = f"""
-    Eres el experto comercial del canal @walfedw especializado en servicios de FLASHEO, LIBERACIÓN Y CARGA DE JUEGOS PARA CONSOLAS (PS3, PS4, PS5).
+    Eres la IA Creadora de Contenido Comercial del canal @walfedw.
+    Especialidad: SERVICIO TÉCNICO, FLASHEO, LIBERACIÓN, PARCHES 60 FPS Y CARGA DE JUEGOS PARA PLAYSTATION (PS3, PS4, PS5).
 
     Novedades de la Scene:
     {texto_noticias}
@@ -98,48 +93,48 @@ def generar_guion(noticias):
     HISTORIAL DE JUEGOS USADOS (PROHIBIDO REPETIR):
     {string_historial}
 
-    OBJETIVO PRINCIPAL: VENDER EL SERVICIO DE FLASHEO DE PS4 Y CAPTAR CLIENTES NUEVOS.
-    
+    OBJETIVO: VENDER EL SERVICIO DE FLASHEO DE PS4 Y CAPTAR CLIENTES DIRECTOS.
+
     REGLAS ESTRICTAS:
-    1. PROHIBIDO MENCIONAR NINTENDO SWITCH.
-    2. EL GANCHO INICIAL DEBE CAPTAR CLIENTES QUE QUIERAN FLASHEAR SU PS4 (Ej: "¿Tienes tu PS4 guardada sin usar?", "¿Quieres flashear tu PS4 y jugarlo todo?").
-    3. PROHIBIDO MENCIONAR "MANTENIMIENTO" Y PROHIBIDO MENCIONAR NÚMEROS DE FIRMWARE.
-    4. Usa nombres de juegos 100% reales de PS4.
+    1. PROHIBIDO MOSTRAR O MENCIONAR NINTENDO SWITCH.
+    2. SI HABLAS DE PS4 EN EL VIDEO, EL CONTENIDO VISUAL Y HABLADO DEBE SER 100% DE PS4 (NADA DE CONSOLAS PS5 VISUALMENTE).
+    3. GANCHO DIRECTO A CLIENTES (Ej: "¿Tienes tu PS4 junta polvo? En Walfedw la liberamos hoy mismo").
+    4. CERO MENCION DE FIRMWARES ESPECÍFICOS O MANTENIMIENTO.
 
     FORMATO DE SALIDA EXACTO (JSON puro sin markdown):
     {{
         "titulo_general": "FLASHEO Y JUEGOS PS4",
         "gancho_titulo": "¿TIENES TU PS4 SIN FLASHEAR?",
-        "gancho_locucion": "¿Tienes tu PS4 guardada sin usar? En Walfedw la liberamos hoy mismo y te la entregamos con los mejores juegos.",
+        "gancho_locucion": "¿Tienes tu PS4 guardada sin usar? En Walfedw la liberamos hoy mismo y te la entregamos llena de juegos.",
         "escenas": [
             {{
-                "item": "Nombre Juego Real 1",
-                "detalle": "Flasheo + Instalación de catálogo",
-                "locucion": "En el número uno, [Juego 1]. Libera tu PS4 con nosotros e instálalo hoy mismo.",
-                "busqueda_imagen": "Nombre juego en ingles"
+                "item": "Juego Real 1",
+                "detalle": "Flasheo + Carga de catálogo",
+                "locucion": "En el número uno, [Juego 1]. Trae tu PS4 a Walfedw y te lo instalamos hoy.",
+                "busqueda_imagen": "Nombre juego ingles"
             }},
             {{
-                "item": "Nombre Juego Real 2",
+                "item": "Juego Real 2",
                 "detalle": "Juega sin pagar de más",
-                "locucion": "Número dos, [Juego 2]. Disfrútalo en tu PS4 con nuestro servicio de flasheo y software.",
-                "busqueda_imagen": "Nombre juego en ingles"
+                "locucion": "Número dos, [Juego 2]. Disfrútalo en tu PS4 liberada con nuestro servicio.",
+                "busqueda_imagen": "Nombre juego ingles"
             }},
             {{
-                "item": "Nombre Juego Real 3",
+                "item": "Juego Real 3",
                 "detalle": "Catálogo completo disponible",
-                "locucion": "Número tres, [Juego 3]. Escríbenos al privado para asesorarte y liberar tu sistema PS4.",
-                "busqueda_imagen": "Nombre juego en ingles"
+                "locucion": "Número tres, [Juego 3]. Escríbenos al privado para cotizar el flasheo de tu sistema.",
+                "busqueda_imagen": "Nombre juego ingles"
             }},
             {{
-                "item": "Servicio de Flasheo PS4",
-                "detalle": "Juegos, parches y mods 60 FPS",
+                "item": "Servicio Flasheo PS4",
+                "detalle": "Juegos, parches 60 FPS y soluciones",
                 "locucion": "Y número cuatro, Servicio técnico de flasheo. Activa parches de 60 FPS y trucos en Walfedw.",
-                "busqueda_imagen": "playstation 4 controller neon"
+                "busqueda_imagen": "playstation 4 dualshock controller"
             }}
         ],
         "cierre_titulo": "¡FLASHEA TU PS4 HOY!",
-        "cierre_locucion": "¿Qué esperas para liberar tu PS4? Escríbenos al privado para cotizar el flasheo y enviarte el catálogo.",
-        "hashtags": "#PS4Flasheada #FlasheoPS4 #JuegosPS4 #ConsolaLiberada #walfedw"
+        "cierre_locucion": "¿Qué esperas para liberar tu PS4? Escríbenos al privado para cotizar y enviarte el catálogo.",
+        "hashtags": "#PS4Flasheada #FlasheoPS4 #JuegosPS4 #Walfedw"
     }}
     """
 
@@ -158,7 +153,7 @@ def generar_guion(noticias):
                 if "```json" in texto_respuesta:
                     texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
                 elif "```" in texto_respuesta:
-                    texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
+                    texto_respuesta = texto_respuesta.split("```")[1].split("```")[0].strip()
 
                 datos = json.loads(texto_respuesta)
                 escenas_recibidas = datos.get("escenas", [])
@@ -171,7 +166,7 @@ def generar_guion(noticias):
                         break
                 
                 if not juegos_validos or len(escenas_recibidas) < 3:
-                    print("Aplicando catálogo filtrado de PS4...")
+                    print("Aplicando catálogo comercial verificado...")
                     no_usados = [j for j in CATALOGO_JUEGOS_REALES if j["item"] not in historial_usados]
                     if len(no_usados) < 4:
                         no_usados = CATALOGO_JUEGOS_REALES
@@ -184,7 +179,7 @@ def generar_guion(noticias):
             print(f"Advertencia intento {intento}: {e}")
             time.sleep(3)
 
-    print("Usando catálogo PS4 de respaldo...")
+    print("Usando catálogo de respaldo verificado...")
     no_usados = [j for j in CATALOGO_JUEGOS_REALES if j["item"] not in historial_usados]
     if len(no_usados) < 4:
         no_usados = CATALOGO_JUEGOS_REALES
@@ -195,11 +190,11 @@ def generar_guion(noticias):
     return {
         "titulo_general": "FLASHEO Y JUEGOS PS4",
         "gancho_titulo": "¿TIENES TU PS4 SIN FLASHEAR?",
-        "gancho_locucion": "¿Tienes tu PS4 guardada sin usar? En Walfedw la liberamos hoy mismo y te la entregamos con los mejores juegos.",
+        "gancho_locucion": "¿Tienes tu PS4 guardada sin usar? En Walfedw la liberamos hoy mismo y te la entregamos llena de juegos.",
         "escenas": escenas_seleccionadas,
         "cierre_titulo": "¡FLASHEA TU PS4 HOY!",
-        "cierre_locucion": "¿Qué esperas para liberar tu PS4? Escríbenos al privado para cotizar el flasheo y enviarte el catálogo.",
-        "hashtags": "#PS4Flasheada #FlasheoPS4 #JuegosPS4 #ConsolaLiberada #walfedw"
+        "cierre_locucion": "¿Qué esperas para liberar tu PS4? Escríbenos al privado para cotizar y enviarte el catálogo.",
+        "hashtags": "#PS4Flasheada #FlasheoPS4 #JuegosPS4 #Walfedw"
     }
 
 if __name__ == "__main__":
