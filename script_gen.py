@@ -90,9 +90,9 @@ def generar_guion(noticias):
     string_historial = ", ".join(historial_usados[-30:]) if historial_usados else "Ninguno aún"
 
     prompt = f"""
-    Eres el experto comercial del canal @walfedw especializado en servicios de FLASHEO, LIBERACIÓN Y CARGA DE JUEGOS PARA PS4.
+    Eres el experto comercial del canal @walfedw especializado en servicios de FLASHEO, LIBERACIÓN Y CARGA DE JUEGOS PARA CONSOLAS (PS3, PS4, PS5).
 
-    Noticias de la Scene:
+    Novedades de la Scene:
     {texto_noticias}
 
     HISTORIAL DE JUEGOS USADOS (PROHIBIDO REPETIR):
@@ -101,7 +101,7 @@ def generar_guion(noticias):
     OBJETIVO PRINCIPAL: VENDER EL SERVICIO DE FLASHEO DE PS4 Y CAPTAR CLIENTES NUEVOS.
     
     REGLAS ESTRICTAS:
-    1. ENFÓCATE ÚNICAMENTE EN LA CONSOLA PS4 (Prohibido mencionar PS3, PS5 o Nintendo Switch).
+    1. PROHIBIDO MENCIONAR NINTENDO SWITCH.
     2. EL GANCHO INICIAL DEBE CAPTAR CLIENTES QUE QUIERAN FLASHEAR SU PS4 (Ej: "¿Tienes tu PS4 guardada sin usar?", "¿Quieres flashear tu PS4 y jugarlo todo?").
     3. PROHIBIDO MENCIONAR "MANTENIMIENTO" Y PROHIBIDO MENCIONAR NÚMEROS DE FIRMWARE.
     4. Usa nombres de juegos 100% reales de PS4.
