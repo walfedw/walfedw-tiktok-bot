@@ -11,37 +11,29 @@ def generar_guion(noticias):
     {texto_noticias}
 
     INSTRUCCIONES:
-    1. Elige LA NOTICIA MÁS INTERESANTE o RELEVANTE sobre firmware, scene, actualizaciones o novedades de consolas.
-    2. Si la noticia es un rumor o no está confirmada oficialmente, acláralo usando frases como "se dice que" o "según reportes de la scene". No inventes datos.
-    3. Redacta un guion en ESPAÑOL LATINO diseñado para ser leído en un video de 30 a 40 segundos.
+    1. Elige LA NOTICIA MÁS INTERESANTE sobre firmware, scene, actualizaciones o consolas.
+    2. Redacta un guion en ESPAÑOL LATINO para un video de 30 a 40 segundos.
+    3. Genera una descripción de imagen corta EN INGLÉS para la portada (ej: "PS5 console motherboard repair internal chips dark background neon light photorealistic").
 
-    ESTRUCTURA OBLIGATORIA DEL GUION:
-    - Gancho (0-3s): Una pregunta o dato impactante para captar atención de inmediato.
-    - Explicación (3-25s): Explicar qué pasó o qué significa el término técnico/actualización de forma clara y entretenida. No promocionar descargas o juegos pirateados.
-    - Cierre / Llamado a la Acción (25-35s): Invitar al usuario a dejar su consola en tus manos con una frase como: "¿Tienes una PS3, PS4, PS5 o Switch? No te arriesgues, déjala en manos profesionales con nosotros en @walfedw."
-
-    FORMATO DE SALIDA EXACTO (Devuelve ÚNICAMENTE un JSON válido con esta estructura, sin bloques de código ni markdown):
+    FORMATO DE SALIDA EXACTO (Devuelve ÚNICAMENTE un JSON válido sin markdown):
     {{
         "guion": "Texto completo del guion que hablará la voz en off",
         "titulo": "Título llamativo para publicar en TikTok",
-        "hashtags": "#PS5 #PS4 #NintendoSwitch #ServicioTecnico #walfedw"
+        "hashtags": "#PS5 #PS4 #NintendoSwitch #ServicioTecnico #walfedw",
+        "image_prompt": "descripción breve en inglés sobre la imagen de fondo"
     }}
     """
 
-    print("Generando guion con el motor de IA...")
-    
+    print("Generando guion e idea visual...")
     url = "https://text.pollinations.ai/"
     payload = {
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
+        "messages": [{"role": "user", "content": prompt}],
         "jsonMode": True
     }
 
     response = requests.post(url, json=payload, timeout=30)
     texto_respuesta = response.text.strip()
 
-    # Limpiar formato markdown en caso de ser necesario
     if "```json" in texto_respuesta:
         texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
     elif "```" in texto_respuesta:
@@ -55,9 +47,4 @@ if __name__ == "__main__":
     noticias_prueba = obtener_noticias()
     if noticias_prueba:
         resultado = generar_guion(noticias_prueba)
-        print("--- GUION GENERADO ---")
-        print(resultado["guion"])
-        print("\n--- TÍTULO ---")
-        print(resultado["titulo"])
-        print("\n--- HASHTAGS ---")
-        print(resultado["hashtags"])
+        print(resultado)
