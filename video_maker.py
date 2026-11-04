@@ -35,7 +35,9 @@ def descargar_imagen_fondo(prompt_ingles, ancho=720, alto=1280):
         print(f"Descargando imagen de fondo desde URL: {url_img}")
         res = requests.get(url_img, timeout=20)
         if res.status_code == 200:
-            return Image.open(BytesIO(res.content)).convert("RGBA")
+            # Redimensionar explícitamente a las dimensiones esperadas
+            img = Image.open(BytesIO(res.content)).convert("RGBA")
+            return img.resize((ancho, alto))
     except Exception as e:
         print(f"No se pudo descargar la imagen por URL ({e}), usando fondo por defecto.")
     
@@ -44,21 +46,20 @@ def descargar_imagen_fondo(prompt_ingles, ancho=720, alto=1280):
     return img
 
 def crear_imagen_pantalla(titulo, guion_resumen, prompt_img="", ancho=720, alto=1280):
-    # 1. Obtener imagen base HD de fondo
+    # 1. Obtener imagen base HD de fondo ajustada
     bg_img = descargar_imagen_fondo(prompt_img, ancho, alto)
     
-    # 2. Aplicar desenfoque artístico para legibilidad
+    # 2. Aplicar desenfoque artístico
     bg_blurred = bg_img.filter(ImageFilter.GaussianBlur(radius=6))
     
-    # 3. Superponer capa de gradiente oscuro semitransparente
+    # 3. Superponer capa semitransparente
     overlay = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
     draw_overlay = ImageDraw.Draw(overlay)
     
-    # Degradado oscuro en la zona media e inferior
     draw_overlay.rectangle([0, 0, ancho, alto], fill=(10, 15, 30, 160))
     draw_overlay.rectangle([30, 260, ancho - 30, 1020], fill=(15, 23, 42, 210), outline=(0, 210, 255, 255), width=2)
     
-    # Combinar capas
+    # Combinar capas de tamaño coincidente
     img_final = Image.alpha_composite(bg_blurred, overlay).convert('RGB')
     draw = ImageDraw.Draw(img_final)
 
@@ -70,28 +71,28 @@ def crear_imagen_pantalla(titulo, guion_resumen, prompt_img="", ancho=720, alto=
     except:
         font_marca = font_titulo = font_texto = font_badge = ImageFont.load_default()
 
-    # Badge superior de marca
+    # Encabezado
     draw.text((ancho // 2, 120), "@WALFEDW", fill=(0, 210, 255), anchor="mm", font=font_marca)
     draw.text((ancho // 2, 165), "⚡ TECH NEWS & SERVICIO TÉCNICO ⚡", fill=(255, 200, 0), anchor="mm", font=font_badge)
 
-    # Título principal de la noticia
+    # Título principal
     lineas_titulo = textwrap.wrap(titulo, width=26)
     y_pos = 320
     for linea in lineas_titulo:
         draw.text((ancho // 2, y_pos), linea, fill=(255, 255, 255), anchor="mm", font=font_titulo)
         y_pos += 42
 
-    # Línea divisora neón
+    # Separador neón
     draw.line([80, y_pos + 15, ancho - 80, y_pos + 15], fill=(0, 210, 255), width=3)
 
-    # Texto o resumen
+    # Texto
     lineas_guion = textwrap.wrap(guion_resumen[:220] + "...", width=32)
     y_pos += 60
     for linea in lineas_guion:
         draw.text((ancho // 2, y_pos), linea, fill=(220, 230, 245), anchor="mm", font=font_texto)
         y_pos += 36
 
-    # Call to Action inferior destacado
+    # Llamado a la acción inferior
     draw.rectangle([40, 1060, ancho - 40, 1180], fill=(0, 210, 255, 255))
     draw.text((ancho // 2, 1095), "PS3 • PS4 • PS5 • SWITCH", fill=(10, 15, 30), anchor="mm", font=font_marca)
     draw.text((ancho // 2, 1140), "Mantenimiento y Reparación Profesional", fill=(10, 15, 30), anchor="mm", font=font_badge)
@@ -105,14 +106,13 @@ def crear_video(guion_texto, titulo_texto, prompt_img="gaming console hardware",
     print("2. Generando composición gráfica profesional...")
     crear_imagen_pantalla(titulo_texto, guion_texto, prompt_img)
 
-    print("3. Renderizando video con animación dinámicos...")
+    print("3. Renderizando video con animación de zoom...")
     audio = AudioFileClip("voz.mp3")
     duracion = audio.duration
 
-    # Crear clip con movimiento sutil de Zoom In (Ken Burns Effect)
     clip_base = ImageClip("fondo_pantalla.png").set_duration(duracion)
     
-    # Animación de zoom sutil para darle dinamismo de video
+    # Efecto Zoom-In
     clip_animado = clip_base.resize(lambda t: 1 + 0.04 * (t / duracion))
     clip_animado = clip_animado.set_position(('center', 'center')).set_duration(duracion)
 
