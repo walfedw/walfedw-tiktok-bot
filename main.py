@@ -16,7 +16,7 @@ def enviar_a_telegram(video_path, titulo, guion_completo, hashtags):
     guion_caption = guion_completo if len(guion_completo) <= 650 else guion_completo[:647] + "..."
 
     mensaje_caption = (
-        f"🎬 *¡NUEVO VIDEO PARA TIKTOK!*\n\n"
+        f"🎬 *¡NUEVO VIDEO PARA TIKTOK (PS4)!*\n\n"
         f"📌 *Título:* {titulo}\n\n"
         f"📝 *Guion:*\n{guion_caption}\n\n"
         f"🏷️ *Hashtags:*\n{hashtags}"
@@ -37,27 +37,27 @@ def enviar_a_telegram(video_path, titulo, guion_completo, hashtags):
         raise RuntimeError(f"Error al enviar a Telegram ({response.status_code}): {response.text}")
 
 def main():
-    print("1. Buscando tendencias en Reddit y blogs de Scene...")
+    print("1. Buscando tendencias en Reddit y blogs de Scene PS4...")
     noticias = obtener_noticias()
     if not noticias:
         print("No se encontraron noticias.")
         return
 
-    print("2. Generando guion con Gancho, Juegos y Cierre CTA...")
+    print("2. Generando guion enfocado exclusivamente en Flasheo de PS4...")
     datos = generar_guion(noticias)
 
     escenas = datos.get("escenas", [])
     texto_completo = f"{datos.get('gancho_locucion', '')} " + " ".join([e.get("locucion", "") for e in escenas]) + f" {datos.get('cierre_locucion', '')}"
 
-    print("3. Renderizando video optimizado para TikTok...")
+    print("3. Renderizando video optimizado con marco visual de 440px...")
     archivo_video = crear_video(datos)
 
     print("4. Enviando el video a Telegram...")
     enviar_a_telegram(
         archivo_video, 
-        datos.get("titulo_general", "TOP JUEGOS CONSOLA FLASHEADAS"), 
+        datos.get("titulo_general", "FLASHEO Y JUEGOS PS4"), 
         texto_completo, 
-        datos.get("hashtags", "#walfedw")
+        datos.get("hashtags", "#PS4Flasheada #walfedw")
     )
     print("¡Proceso finalizado correctamente!")
 
