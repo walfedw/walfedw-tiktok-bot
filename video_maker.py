@@ -16,7 +16,7 @@ from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, Composi
 VOCES = ["es-MX-DarianNeural", "es-MX-JorgeNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
-# Repositorio 1: Mapa directo de alta resolución para los principales títulos
+# Repositorio 1: Mapa directo HD exclusivo de PS4, Switch y Juegos (0 PS5)
 IMAGENES_DIRECTAS = {
     "ghost of tsushima": "https://cdn.akamai.steamstatic.com/steam/apps/2215430/header.jpg",
     "the last of us part ii": "https://cdn.akamai.steamstatic.com/steam/apps/1888930/header.jpg",
@@ -29,13 +29,16 @@ IMAGENES_DIRECTAS = {
     "bloodborne": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1080&h=1920&fit=crop",
     "spider-man miles morales": "https://cdn.akamai.steamstatic.com/steam/apps/1817070/header.jpg",
     "resident evil 4 remake": "https://cdn.akamai.steamstatic.com/steam/apps/2050650/header.jpg",
-    "cyberpunk 2077": "https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg"
+    "cyberpunk 2077": "https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg",
+    "playstation 4 console": "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=1080&h=1920&fit=crop",
+    "playstation 4 setup": "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=1080&h=1920&fit=crop",
+    "playstation gaming setup": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1080&h=1920&fit=crop"
 }
 
 FALLBACK_IMAGES = [
+    "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=1080&h=1920&fit=crop",
     "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1080&h=1920&fit=crop",
-    "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=1080&h=1920&fit=crop",
-    "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=1080&h=1920&fit=crop"
+    "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1080&h=1920&fit=crop"
 ]
 
 def limpiar_texto(texto):
@@ -89,7 +92,7 @@ def obtener_imagen_base64(nombre_juego, idx_escena=0):
             except Exception as e:
                 print(f"[Mapa Directo Error] {e}")
 
-    # Repositorio 2: Steam Store API CDN (Gratuito de Valve)
+    # Repositorio 2: Steam Store API CDN
     try:
         url_steam = f"https://store.steampowered.com/api/storesearch/?term={requests.utils.quote(nombre_juego)}&l=english&cc=US"
         res = requests.get(url_steam, timeout=7, headers={"User-Agent": "Mozilla/5.0"})
@@ -122,22 +125,8 @@ def obtener_imagen_base64(nombre_juego, idx_escena=0):
     except Exception as e:
         print(f"[RAWG Error] {e}")
 
-    # Repositorio 4: Wikipedia / Wikimedia API
-    try:
-        url_wiki = f"https://en.wikipedia.org/w/api.php?action=query&titles={requests.utils.quote(nombre_juego)}&prop=pageimages&format=json&pithumbsize=1080"
-        res = requests.get(url_wiki, timeout=7, headers={"User-Agent": "WalfedwBot/1.0"})
-        if res.status_code == 200:
-            pages = res.json().get("query", {}).get("pages", {})
-            for pid, pdata in pages.items():
-                if "thumbnail" in pdata and pdata["thumbnail"].get("source"):
-                    print(f"[Wikipedia OK] Imagen para: {nombre_juego}")
-                    return descargar_bytes_a_base64(pdata["thumbnail"]["source"])
-    except Exception as e:
-        print(f"[Wikipedia Error] {e}")
-
-    # Repositorio 5: Respaldo final
     fallback_url = FALLBACK_IMAGES[idx_escena % len(FALLBACK_IMAGES)]
-    print(f"[Fallback HD] Fondo genérico para escena #{idx_escena}")
+    print(f"[Fallback HD] Fondo para escena #{idx_escena}")
     return descargar_bytes_a_base64(fallback_url)
 
 def descargar_musica_fondo():
@@ -178,12 +167,13 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
         }}
         .bg-image {{
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: -5%; left: -5%; width: 110%; height: 110%;
             background-image: url('{b64_img}');
             background-size: cover;
             background-position: center;
-            filter: brightness(0.60) contrast(1.1);
+            filter: blur(28px) brightness(0.35);
             z-index: 1;
+            transform: scale(1.08);
         }}
         .container {{
             position: relative;
@@ -221,15 +211,38 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
             background: rgba(15, 23, 42, 0.92);
             border: 2px solid #00d2ff;
             border-radius: 24px;
-            padding: 28px 22px;
+            padding: 24px 20px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.85);
             backdrop-filter: blur(15px);
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }}
-        .category-title {{ font-size: 22px; font-weight: 800; color: #a5f3fc; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px; }}
-        .item-number {{ display: inline-block; background: #00d2ff; color: #0b0f19; font-size: 22px; font-weight: 900; padding: 6px 16px; border-radius: 12px; margin-bottom: 12px; }}
-        .item-title {{ font-size: 32px; font-weight: 900; color: #ffffff; text-transform: uppercase; line-height: 1.2; text-shadow: 0 0 12px rgba(0,210,255,0.6); margin-bottom: 10px; }}
-        .item-desc {{ font-size: 21px; font-weight: 600; color: #fde047; line-height: 1.35; }}
+        .category-title {{ font-size: 22px; font-weight: 800; color: #a5f3fc; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px; }}
+        .item-number {{ display: inline-block; background: #00d2ff; color: #0b0f19; font-size: 20px; font-weight: 900; padding: 5px 14px; border-radius: 10px; margin-bottom: 12px; }}
+
+        .game-banner-box {{
+            width: 100%;
+            height: 250px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid #00d2ff;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+            background: rgba(5, 10, 20, 0.8);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+        .game-banner-img {{
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }}
+
+        .item-title {{ font-size: 30px; font-weight: 900; color: #ffffff; text-transform: uppercase; line-height: 1.2; text-shadow: 0 0 12px rgba(0,210,255,0.6); margin-bottom: 8px; }}
+        .item-desc {{ font-size: 20px; font-weight: 600; color: #fde047; line-height: 1.35; }}
 
         .cta-box {{
             background: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);
@@ -256,6 +269,9 @@ def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, 
         <div class="main-card">
             <div class="category-title">{titulo_superior}</div>
             <div class="item-number">{badge_text}</div>
+            <div class="game-banner-box">
+                <img src="{b64_img}" class="game-banner-img" />
+            </div>
             <div class="item-title">{titulo_principal}</div>
             <div class="item-desc">{detalle}</div>
         </div>
@@ -369,20 +385,20 @@ def procesar_escena_individual(idx, sup_title, badge, main_title, detail, locuci
     return video_escena
 
 def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
-    titulo_general = datos_guion.get("titulo_general", "TOP JUEGOS CONSOLA FLASHEADAS")
-    gancho_loc = datos_guion.get("gancho_locucion", "¿Tienes tu PS4 flasheada? Guarda estos 3 juegos indispensables.")
-    gancho_tit = datos_guion.get("gancho_titulo", "¿PS4 FLASHEADA?")
+    titulo_general = datos_guion.get("titulo_general", "FLASHEO Y JUEGOS PS4 / SWITCH")
+    gancho_loc = datos_guion.get("gancho_locucion", "¿Quieres flashear tu PS4 o Switch? En Walfedw la liberamos hoy.")
+    gancho_tit = datos_guion.get("gancho_titulo", "¿QUIERES FLASHEAR TU CONSOLA?")
     escenas = datos_guion.get("escenas", [])
-    cierre_loc = datos_guion.get("cierre_locucion", "¿Cuál es tu favorito? Comenta o escríbenos al privado.")
-    cierre_tit = datos_guion.get("cierre_titulo", "¿CUÁL ES TU FAVORITO?")
+    cierre_loc = datos_guion.get("cierre_locucion", "¿Qué esperas para liberar tu consola? Escríbenos al privado.")
+    cierre_tit = datos_guion.get("cierre_titulo", "¡FLASHEA TU CONSOLA HOY!")
 
     clips_completos = []
     archivos_temporales = []
 
     print("1. Renderizando Gancho Inicial...")
     clip_gancho = procesar_escena_individual(
-        0, titulo_general, "⚡ ATENCIÓN GAMERS ⚡", gancho_tit, 
-        "Guarda estos indispensables ya", gancho_loc, "PlayStation 4 Console Setup", archivos_temporales
+        0, titulo_general, "⚡ SERVICIO DE FLASHEO ⚡", gancho_tit, 
+        "Flasheo profesional y carga de catálogo", gancho_loc, "playstation 4 console", archivos_temporales
     )
     clips_completos.append(clip_gancho)
 
@@ -401,8 +417,8 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
 
     print("3. Renderizando Escena Final de Cierre (CTA)...")
     clip_cierre = procesar_escena_individual(
-        99, titulo_general, "💬 RESPONDE EN COMENTARIOS", cierre_tit, 
-        "Escríbenos para el catálogo completo", cierre_loc, "PlayStation Gaming Setup", archivos_temporales
+        99, titulo_general, "💬 ESCRÍBENOS AL PRIVADO", cierre_tit, 
+        "Cotiza tu flasheo y catálogo completo", cierre_loc, "playstation 4 setup", archivos_temporales
     )
     clips_completos.append(clip_cierre)
 
