@@ -13,7 +13,6 @@ def enviar_a_telegram(video_path, titulo, guion, hashtags):
 
     url_video = f"https://api.telegram.org/bot{token}/sendVideo"
     
-    # Recortar el guion para garantizar que la descripción no exceda el límite de 1024 caracteres de Telegram
     guion_caption = guion if len(guion) <= 650 else guion[:647] + "..."
 
     mensaje_caption = (
@@ -47,14 +46,14 @@ def main():
     print("2. Generando guion enfocado en consolas flasheadas...")
     datos = generar_guion(noticias)
 
-    codigo_pantalla = datos.get("codigo_pantalla", "")
+    elementos_pantalla = datos.get("elementos_pantalla", ["Juegos Gratuitos", "Mantenimiento Preventivo", "Mods Exclusivos"])
     prompt_imagen = datos.get("image_prompt", "ps4 console hardware neon")
 
-    print("3. Renderizando video con interfaz HTML/CSS...")
+    print("3. Renderizando video con elementos visuales dinámicos...")
     archivo_video = crear_video(
         datos["guion"], 
         datos["titulo"], 
-        codigo_pantalla, 
+        elementos_pantalla, 
         prompt_imagen
     )
 
