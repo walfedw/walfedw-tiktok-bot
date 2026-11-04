@@ -2,13 +2,42 @@ import os
 import json
 import google.generativeai as genai
 
+def obtener_modelo():
+    try:
+        modelos_disponibles = [
+            m.name for m in genai.list_models() 
+            if 'generateContent' in m.supported_generation_methods
+        ]
+        print(f"Modelos activos detectados en tu cuenta: {modelos_disponibles}")
+        
+        # Intentar seleccionar en orden de prioridad
+        for preferido in ['models/gemini-2.5-flash', 'models/gemini-2.0-flash', 'models/gemini-1.5-flash']:
+            if preferido in modelos_disponibles:
+                return preferido
+                
+        # Si no coincide ninguno de la lista preferida, usar cualquier modelo Flash disponible
+        for m in modelos_disponibles:
+            if 'flash' in m:
+                return m
+                
+        # Usar el primer modelo disponible como alternativa final
+        if modelos_disponibles:
+            return modelos_disponibles[0]
+            
+    except Exception as e:
+        print(f"No se pudo consultar la lista de modelos: {e}")
+        
+    return 'models/gemini-1.5-flash'
+
 def generar_guion(noticias):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("Error: No se encontró la variable GEMINI_API_KEY")
 
-    # Configurar la API oficial de Google AI Studio
     genai.configure(api_key=api_key)
+    
+    nombre_modelo = obtener_modelo()
+    print(f"Modelo seleccionado para generar el guion: {nombre_modelo}")
 
     texto_noticias = "\n".join([f"- {n['titulo']}: {n['resumen']}" for n in noticias[:10]])
 
@@ -36,7 +65,7 @@ def generar_guion(noticias):
     }}
     """
 
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel(nombre_modelo)
     response = model.generate_content(prompt)
 
     texto_respuesta = response.text.strip()
