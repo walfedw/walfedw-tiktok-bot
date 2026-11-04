@@ -1,17 +1,10 @@
-import PIL.Image
-
-# Parche de compatibilidad para versiones de MoviePy con Pillow
-if not hasattr(PIL.Image, 'ANTIALIAS'):
-    PIL.Image.ANTIALIAS = getattr(PIL.Image, 'LANCZOS', getattr(PIL.Image, 'BICUBIC', None))
-
+import os
 import asyncio
-import textwrap
 import re
 import urllib.parse
 import requests
 import edge_tts
-from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from playwright.sync_api import sync_playwright
 from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
 
 VOCES = ["es-MX-DarianNeural", "es-MX-JorgeNeural", "es-ES-AlvaroNeural"]
@@ -22,7 +15,7 @@ def limpiar_texto(texto):
 async def generar_audio(texto, archivo_salida="voz.mp3"):
     texto_procesar = limpiar_texto(texto)
     if not texto_procesar:
-        texto_procesar = "Flasheo, liberación, juegos y mantenimiento técnico para consolas en Walfedw."
+        texto_procesar = "Flasheo, liberación, catálogo de juegos y mantenimiento para PS3, PS4, PS5 y Switch en Walfedw."
 
     for voz in VOCES:
         try:
@@ -34,84 +27,153 @@ async def generar_audio(texto, archivo_salida="voz.mp3"):
 
     raise RuntimeError("Error al generar el audio.")
 
-def descargar_imagen_fondo(prompt_ingles, ancho=720, alto=1280):
+def descargar_url_imagen(prompt_ingles):
     try:
-        prompt_enc = urllib.parse.quote(prompt_ingles + " gaming console hardware high quality photorealistic 8k")
-        url_img = f"https://image.pollinations.ai/prompt/{prompt_enc}?width={ancho}&height={alto}&nologo=true&seed=42"
-        print(f"Descargando imagen de fondo desde URL: {url_img}")
-        res = requests.get(url_img, timeout=20)
-        if res.status_code == 200:
-            img = Image.open(BytesIO(res.content)).convert("RGBA")
-            return img.resize((ancho, alto))
-    except Exception as e:
-        print(f"Usando fondo por defecto ({e}).")
-    
-    return Image.new('RGBA', (ancho, alto), color=(15, 23, 42, 255))
-
-def crear_imagen_pantalla(titulo, guion_resumen, prompt_img="", ancho=720, alto=1280):
-    bg_img = descargar_imagen_fondo(prompt_img, ancho, alto)
-    bg_blurred = bg_img.filter(ImageFilter.GaussianBlur(radius=6))
-    
-    overlay = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
-    draw_overlay = ImageDraw.Draw(overlay)
-    
-    draw_overlay.rectangle([0, 0, ancho, alto], fill=(10, 15, 30, 160))
-    draw_overlay.rectangle([30, 260, ancho - 30, 1020], fill=(15, 23, 42, 210), outline=(0, 210, 255, 255), width=2)
-    
-    img_final = Image.alpha_composite(bg_blurred, overlay).convert('RGB')
-    draw = ImageDraw.Draw(img_final)
-
-    try:
-        font_marca = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
-        font_titulo = ImageFont.truetype("DejaVuSans-Bold.ttf", 30)
-        font_texto = ImageFont.truetype("DejaVuSans.ttf", 25)
-        font_badge = ImageFont.truetype("DejaVuSans-Bold.ttf", 21)
+        prompt_enc = urllib.parse.quote(prompt_ingles + " gaming console hardware dark neon light 8k")
+        return f"https://image.pollinations.ai/prompt/{prompt_enc}?width=720&height=1280&nologo=true&seed=42"
     except:
-        font_marca = font_titulo = font_texto = font_badge = ImageFont.load_default()
+        return "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=720&h=1280&fit=crop"
 
-    # Encabezado principal de Marca
-    draw.text((ancho // 2, 120), "@WALFEDW", fill=(0, 210, 255), anchor="mm", font=font_marca)
-    draw.text((ancho // 2, 165), "⚡ FLASHEO • JUEGOS • MANTENIMIENTO ⚡", fill=(255, 200, 0), anchor="mm", font=font_badge)
+def generar_escena_html(titulo, guion, codigo_pantalla, prompt_img):
+    url_bg = descargar_url_imagen(prompt_img)
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
+            body {{
+                width: 720px;
+                height: 1280px;
+                background-color: #0b0f19;
+                color: #ffffff;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                padding: 45px 35px;
+                position: relative;
+                overflow: hidden;
+            }}
+            .bg-image {{
+                position: absolute;
+                top: 0; left: 0; width: 100%; height: 100%;
+                background-image: url('{url_bg}');
+                background-size: cover;
+                background-position: center;
+                filter: blur(10px) brightness(0.35);
+                z-index: 1;
+            }}
+            .container {{
+                position: relative;
+                z-index: 2;
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                justify-content: space-between;
+            }}
+            .header {{
+                background: rgba(15, 23, 42, 0.75);
+                border: 2px solid #00d2ff;
+                border-radius: 20px;
+                padding: 20px;
+                text-align: center;
+                box-shadow: 0 0 25px rgba(0, 210, 255, 0.4);
+                backdrop-filter: blur(12px);
+            }}
+            .brand {{ font-size: 38px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; }}
+            .sub-brand {{ font-size: 20px; color: #ffc800; font-weight: 700; margin-top: 6px; }}
 
-    # Título del tema
-    lineas_titulo = textwrap.wrap(titulo, width=28)
-    y_pos = 320
-    for linea in lineas_titulo:
-        draw.text((ancho // 2, y_pos), linea, fill=(255, 255, 255), anchor="mm", font=font_titulo)
-        y_pos += 40
+            .main-card {{
+                background: rgba(15, 23, 42, 0.85);
+                border: 1px solid rgba(0, 210, 255, 0.5);
+                border-radius: 24px;
+                padding: 30px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+                backdrop-filter: blur(15px);
+            }}
+            .title {{ font-size: 30px; font-weight: 800; color: #ffffff; margin-bottom: 20px; line-height: 1.3; text-transform: uppercase; }}
+            
+            .code-box {{
+                background: #050811;
+                border-left: 4px solid #00d2ff;
+                border-radius: 10px;
+                padding: 16px;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 19px;
+                color: #a5f3fc;
+                margin-bottom: 20px;
+                box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            }}
+            .description {{ font-size: 23px; color: #cbd5e1; line-height: 1.45; font-weight: 400; }}
 
-    # Separador Neón
-    draw.line([80, y_pos + 15, ancho - 80, y_pos + 15], fill=(0, 210, 255), width=3)
+            .cta-box {{
+                background: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);
+                border-radius: 20px;
+                padding: 22px;
+                text-align: center;
+                color: #0b0f19;
+                box-shadow: 0 0 30px rgba(0, 210, 255, 0.6);
+            }}
+            .cta-title {{ font-size: 30px; font-weight: 900; letter-spacing: 1px; }}
+            .cta-desc {{ font-size: 20px; font-weight: 800; margin-top: 4px; opacity: 0.95; }}
+        </style>
+    </head>
+    <body>
+        <div class="bg-image"></div>
+        <div class="container">
+            <div class="header">
+                <div class="brand">@WALFEDW</div>
+                <div class="sub-brand">⚡ FLASHEO • JUEGOS • SERVICIO TÉCNICO ⚡</div>
+            </div>
 
-    # Resumen / Explicación
-    lineas_guion = textwrap.wrap(guion_resumen[:220] + "...", width=32)
-    y_pos += 60
-    for linea in lineas_guion:
-        draw.text((ancho // 2, y_pos), linea, fill=(220, 230, 245), anchor="mm", font=font_texto)
-        y_pos += 36
+            <div class="main-card">
+                <div class="title">{titulo}</div>
+                <div class="code-box">
+                    <span style="color:#f43f5e">console_config</span> {<br>
+                      <span style="color:#38bdf8">mode</span>: <span style="color:#fde047">"Flasheada / HEN"</span>;<br>
+                      <span style="color:#38bdf8">status</span>: <span style="color:#4ade80">"Juegos Desbloqueados"</span>;<br>
+                    }
+                </div>
+                <div class="description">{guion[:220]}...</div>
+            </div>
 
-    # Call To Action permanente inferior
-    draw.rectangle([40, 1060, ancho - 40, 1180], fill=(0, 210, 255, 255))
-    draw.text((ancho // 2, 1095), "PS3 • PS4 • PS5 • SWITCH", fill=(10, 15, 30), anchor="mm", font=font_marca)
-    draw.text((ancho // 2, 1140), "¡Servicio Técnico y Liberación de Consolas!", fill=(10, 15, 30), anchor="mm", font=font_badge)
+            <div class="cta-box">
+                <div class="cta-title">PS3 • PS4 • PS5 • SWITCH</div>
+                <div class="cta-desc">¡Escríbenos para Asesoría y Juegos!</div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    with open("template.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
 
-    img_final.save("fondo_pantalla.png")
+def renderizar_html_a_imagen():
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={"width": 720, "height": 1280})
+        ruta_absoluta = os.path.abspath("template.html")
+        page.goto(f"file://{ruta_absoluta}")
+        page.screenshot(path="fondo_pantalla.png")
+        browser.close()
 
-def crear_video(guion_texto, titulo_texto, prompt_img="gaming console hardware", archivo_salida="noticia_tiktok.mp4"):
-    print("1. Generando locución de voz en off...")
+def crear_video(guion_texto, titulo_texto, codigo_pantalla="", prompt_img="gaming console hardware", archivo_salida="noticia_tiktok.mp4"):
+    print("1. Generando locución...")
     asyncio.run(generar_audio(guion_texto, "voz.mp3"))
 
-    print("2. Generando composición gráfica...")
-    crear_imagen_pantalla(titulo_texto, guion_texto, prompt_img)
+    print("2. Generando render de pantalla HTML5/CSS3...")
+    generar_escena_html(titulo_texto, guion_texto, codigo_pantalla, prompt_img)
+    renderizar_html_a_imagen()
 
-    print("3. Renderizando video...")
+    print("3. Renderizando MP4...")
     audio = AudioFileClip("voz.mp3")
     duracion = audio.duration
 
     clip_base = ImageClip("fondo_pantalla.png").set_duration(duracion)
-    
-    # Efecto Zoom In
-    clip_animado = clip_base.resize(lambda t: 1 + 0.04 * (t / duracion))
+    clip_animado = clip_base.resize(lambda t: 1 + 0.03 * (t / duracion))
     clip_animado = clip_animado.set_position(('center', 'center')).set_duration(duracion)
 
     video_final = CompositeVideoClip([clip_animado], size=(720, 1280)).set_audio(audio)
