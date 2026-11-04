@@ -13,10 +13,13 @@ def enviar_a_telegram(video_path, titulo, guion, hashtags):
 
     url_video = f"https://api.telegram.org/bot{token}/sendVideo"
     
+    # Recortar el guion para garantizar que la descripción no exceda el límite de 1024 caracteres de Telegram
+    guion_caption = guion if len(guion) <= 650 else guion[:647] + "..."
+
     mensaje_caption = (
         f"🎬 *¡NUEVO VIDEO PARA TIKTOK!*\n\n"
         f"📌 *Título:* {titulo}\n\n"
-        f"📝 *Guion:*\n{guion}\n\n"
+        f"📝 *Guion:*\n{guion_caption}\n\n"
         f"🏷️ *Hashtags:*\n{hashtags}"
     )
 
