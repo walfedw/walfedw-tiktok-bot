@@ -16,6 +16,22 @@ from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, Composi
 VOCES = ["es-MX-DarianNeural", "es-MX-JorgeNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
+# Repositorio 1: Mapa directo de alta resolución para los principales títulos
+IMAGENES_DIRECTAS = {
+    "ghost of tsushima": "https://cdn.akamai.steamstatic.com/steam/apps/2215430/header.jpg",
+    "the last of us part ii": "https://cdn.akamai.steamstatic.com/steam/apps/1888930/header.jpg",
+    "god of war ragnarok": "https://cdn.akamai.steamstatic.com/steam/apps/2322010/header.jpg",
+    "god of war ragnarök": "https://cdn.akamai.steamstatic.com/steam/apps/2322010/header.jpg",
+    "red dead redemption 2": "https://cdn.akamai.steamstatic.com/steam/apps/1174180/header.jpg",
+    "grand theft auto v": "https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg",
+    "gta v": "https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg",
+    "elden ring": "https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg",
+    "bloodborne": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1080&h=1920&fit=crop",
+    "spider-man miles morales": "https://cdn.akamai.steamstatic.com/steam/apps/1817070/header.jpg",
+    "resident evil 4 remake": "https://cdn.akamai.steamstatic.com/steam/apps/2050650/header.jpg",
+    "cyberpunk 2077": "https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg"
+}
+
 FALLBACK_IMAGES = [
     "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1080&h=1920&fit=crop",
     "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=1080&h=1920&fit=crop",
@@ -26,7 +42,6 @@ def limpiar_texto(texto):
     return re.sub(r'[^\w\s.,¡!¿?@#\-áéíóúÁÉÍÓÚñÑ]', '', texto).strip()
 
 def cargar_logo_base64():
-    """Carga walfedw.jpg o logo.png del repositorio para insertarlo como avatar circular neón."""
     posibles_nombres = ["walfedw.jpg", "walfedw.png", "logo.jpg", "logo.png"]
     for nombre in posibles_nombres:
         if os.path.exists(nombre):
@@ -34,7 +49,6 @@ def cargar_logo_base64():
                 with open(nombre, "rb") as f:
                     b64 = base64.b64encode(f.read()).decode("utf-8")
                     mime = "image/png" if nombre.endswith(".png") else "image/jpeg"
-                    print(f"Logo cargado exitosamente desde: {nombre}")
                     return f"data:{mime};base64,{b64}"
             except Exception as e:
                 print(f"Error al procesar logo {nombre}: {e}")
@@ -56,30 +70,74 @@ async def generar_audio(texto, archivo_salida):
     raise RuntimeError("Error al generar el audio.")
 
 def descargar_bytes_a_base64(url):
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WalfedwBot/1.0"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     res = requests.get(url, headers=headers, timeout=12)
-    if res.status_code == 200 and len(res.content) > 5000:
+    if res.status_code == 200 and len(res.content) > 3000:
         b64 = base64.b64encode(res.content).decode("utf-8")
         return f"data:image/jpeg;base64,{b64}"
     raise ValueError("Respuesta inválida al descargar imagen.")
 
 def obtener_imagen_base64(nombre_juego, idx_escena=0):
-    busqueda_limpia = re.sub(r'[^\w\s]', '', nombre_juego).strip()
-    
+    nombre_lower = nombre_juego.lower().strip()
+
+    # Repositorio 1: Mapa directo
+    for clave, url_directa in IMAGENES_DIRECTAS.items():
+        if clave in nombre_lower:
+            try:
+                print(f"[Mapa Directo HD] Imagen para: '{nombre_juego}'")
+                return descargar_bytes_a_base64(url_directa)
+            except Exception as e:
+                print(f"[Mapa Directo Error] {e}")
+
+    # Repositorio 2: Steam Store API CDN (Gratuito de Valve)
     try:
+        url_steam = f"https://store.steampowered.com/api/storesearch/?term={requests.utils.quote(nombre_juego)}&l=english&cc=US"
+        res = requests.get(url_steam, timeout=7, headers={"User-Agent": "Mozilla/5.0"})
+        if res.status_code == 200:
+            data = res.json()
+            if data.get("items"):
+                app_id = data["items"][0]["id"]
+                url_hero = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_hero.jpg"
+                url_header = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/header.jpg"
+                for img_test in [url_hero, url_header]:
+                    try:
+                        print(f"[Steam Store CDN] Imagen para: '{nombre_juego}' (AppID {app_id})")
+                        return descargar_bytes_a_base64(img_test)
+                    except:
+                        continue
+    except Exception as e:
+        print(f"[Steam API Error] {e}")
+
+    # Repositorio 3: RAWG API
+    try:
+        busqueda_limpia = re.sub(r'[^\w\s]', '', nombre_juego).strip()
         url_rawg = f"https://api.rawg.io/api/games?search={requests.utils.quote(busqueda_limpia)}&key=c53a23720ea1477389822e6e3176477d&page_size=1"
-        res = requests.get(url_rawg, timeout=8)
+        res = requests.get(url_rawg, timeout=7)
         if res.status_code == 200:
             data = res.json()
             if data.get("results") and data["results"][0].get("background_image"):
                 img_url = data["results"][0]["background_image"]
-                print(f"[RAWG OK] Imagen oficial encontrada para: {busqueda_limpia}")
+                print(f"[RAWG OK] Imagen para: {busqueda_limpia}")
                 return descargar_bytes_a_base64(img_url)
     except Exception as e:
         print(f"[RAWG Error] {e}")
 
+    # Repositorio 4: Wikipedia / Wikimedia API
+    try:
+        url_wiki = f"https://en.wikipedia.org/w/api.php?action=query&titles={requests.utils.quote(nombre_juego)}&prop=pageimages&format=json&pithumbsize=1080"
+        res = requests.get(url_wiki, timeout=7, headers={"User-Agent": "WalfedwBot/1.0"})
+        if res.status_code == 200:
+            pages = res.json().get("query", {}).get("pages", {})
+            for pid, pdata in pages.items():
+                if "thumbnail" in pdata and pdata["thumbnail"].get("source"):
+                    print(f"[Wikipedia OK] Imagen para: {nombre_juego}")
+                    return descargar_bytes_a_base64(pdata["thumbnail"]["source"])
+    except Exception as e:
+        print(f"[Wikipedia Error] {e}")
+
+    # Repositorio 5: Respaldo final
     fallback_url = FALLBACK_IMAGES[idx_escena % len(FALLBACK_IMAGES)]
-    print(f"[Fallback] Fondo genérico para escena #{idx_escena}")
+    print(f"[Fallback HD] Fondo genérico para escena #{idx_escena}")
     return descargar_bytes_a_base64(fallback_url)
 
 def descargar_musica_fondo():
@@ -98,11 +156,8 @@ def descargar_musica_fondo():
 
 def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, b64_img, nombre_salida_html):
     logo_b64 = cargar_logo_base64()
-    
-    avatar_html = ""
-    if logo_b64:
-        avatar_html = f"<img src='{logo_b64}' class='brand-avatar' />"
-        
+    avatar_html = f"<img src='{logo_b64}' class='brand-avatar' />" if logo_b64 else ""
+
     html_content = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
