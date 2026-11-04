@@ -43,21 +43,20 @@ def main():
         print("No se encontraron noticias.")
         return
 
-    print("2. Generando guion y desglose de escenas...")
+    print("2. Generando guion con Gancho, Juegos y Cierre CTA...")
     datos = generar_guion(noticias)
 
-    # Construir un texto completo acumulado para el caption de Telegram
     escenas = datos.get("escenas", [])
-    guion_acumulado = " ".join([e.get("texto_locucion", "") for e in escenas])
+    texto_completo = f"{datos.get('gancho_locucion', '')} " + " ".join([e.get("locucion", "") for e in escenas]) + f" {datos.get('cierre_locucion', '')}"
 
-    print("3. Renderizando video con imágenes reales HD y voz 100% sincronizada...")
+    print("3. Renderizando video optimizado para TikTok...")
     archivo_video = crear_video(datos)
 
     print("4. Enviando el video a Telegram...")
     enviar_a_telegram(
         archivo_video, 
         datos.get("titulo_general", "TOP JUEGOS CONSOLA FLASHEADAS"), 
-        guion_acumulado, 
+        texto_completo, 
         datos.get("hashtags", "#walfedw")
     )
     print("¡Proceso finalizado correctamente!")
