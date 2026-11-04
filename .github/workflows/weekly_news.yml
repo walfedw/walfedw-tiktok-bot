@@ -38,3 +38,11 @@ jobs:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: |
         python main.py
+
+    - name: Guardar Historial en el Repositorio
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add historial.json
+        git commit -m "Actualizar historial.json con juegos usados [skip ci]" || echo "Sin cambios en historial"
+        git push || echo "No hay cambios para subir"
