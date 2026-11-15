@@ -156,6 +156,8 @@ def descargar_clips_youtube(busquedas_youtube, juegos_solicitados, max_clips=5):
     yt_usados = cargar_yt_usados()
     consultas = list(busquedas_youtube or [])
     for j in juegos_solicitados:
+        if "grand theft auto" in j.lower() or "gta" in j.lower():
+            continue
         q_extra = f"{j} PS4 gameplay no commentary"
         if q_extra not in consultas:
             consultas.append(q_extra)
@@ -173,7 +175,6 @@ def descargar_clips_youtube(busquedas_youtube, juegos_solicitados, max_clips=5):
                 continue
 
             entries = json.loads(res.stdout).get("entries", [])
-            # Priorizar videos de YouTube que nunca se hayan usado antes
             nuevos = [e for e in entries if e.get("id") and e.get("id") not in yt_usados]
             candidatos = nuevos if nuevos else entries
             random.shuffle(candidatos)
@@ -181,7 +182,8 @@ def descargar_clips_youtube(busquedas_youtube, juegos_solicitados, max_clips=5):
             for entry in candidatos:
                 vid_id = entry.get("id")
                 dur = entry.get("duration") or 0
-                if not vid_id or (dur and (dur < 40 or dur > 2400)):
+                titulo_vid = (entry.get("title") or "").lower()
+                if not vid_id or "online" in titulo_vid or (dur and (dur < 40 or dur > 2400)):
                     continue
 
                 vid_url = f"https://www.youtube.com/watch?v={vid_id}"
@@ -237,6 +239,10 @@ def descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4):
     for idx, juego in enumerate(juegos_solicitados):
         if len(clips_listos) >= max_clips:
             break
+        # Evitar el trailer de Steam de GTA V porque muestra el logo gigante de "GTA Online"
+        if "grand theft auto" in juego.lower() or "gta" in juego.lower():
+            continue
+
         app_id = buscar_app_id_dinamico(juego)
         if not app_id:
             continue
@@ -262,7 +268,7 @@ def descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4):
                 continue
 
             ruta_mp4 = f"temp_gp_{idx}.mp4"
-            inicio_accion = random.randint(20, 40)
+            inicio_accion = random.randint(25, 45)
             if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio_accion, duracion=8):
                 print(f"[OK Steam Gameplay] {juego}")
                 clips_listos.append(ruta_mp4)
@@ -283,7 +289,6 @@ def obtener_recursos_visuales(busquedas_youtube, juegos_solicitados):
     if externos:
         mezcla.extend(externos[:2])
         if clips_locales:
-            # Solo 1 clip propio rotativo como sello de autenticidad en medio del video
             mezcla.append(random.choice(clips_locales))
         mezcla.extend(externos[2:])
         print(f"Montaje listo: {len(clips_yt)} clips nuevos de YouTube + {len(clips_steam)} de Steam + cameo local.")
@@ -829,7 +834,7 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     )
     juegos_visuales = datos_guion.get(
         "juegos_visuales",
-        ["God of War Ragnarok", "Ghost of Tsushima", "Red Dead Redemption 2", "Grand Theft Auto V"]
+        ["God of War Ragnarok", "Ghost of Tsushima", "Red Dead Redemption 2", "Resident Evil 4"]
     )
     busquedas_youtube = datos_guion.get(
         "busquedas_youtube",
