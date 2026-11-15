@@ -13,31 +13,38 @@ PALABRAS_BLOQUEADAS_FEED = (
     "buy", "sell", "switch", "nintendo", "firmware", "9.00", "11.00", "12."
 )
 
+# Filtro estricto para que el bot JAMÁS diga que se puede jugar online en consola flasheada
+FRASES_INCOHERENTES = (
+    "en línea", "en linea", "online", "psn", "playstation network",
+    "servidores oficiales", "do not", "fpkgs", "switch", "nintendo",
+    "spider-man 2", "wukong", "bote la noche"
+)
+
 BANCOS_POR_FORMATO = {
     "noticiero": [
         {
             "tema": "Última hora: Nuevos parches a 60 FPS para juegazos de PS4",
             "gancho": "Atención gente de PS4, acaban de salir nuevos parches que desbloquean los 60 FPS reales en juegazos pesados.",
-            "locucion": "Atención gente de PS4, acaban de salir nuevos parches de comunidad que desbloquean los 60 FPS reales en juegazos pesados. Gracias a estas mejoras, títulos como Red Dead Redemption 2, Bloodborne, Days Gone y God of War Ragnarok se sienten muchísimo más fluidos en tu consola. Si quieres tener tu PS4 o PS3 liberada con estas novedades y tus juegos favoritos ya instalados, escríbeme hoy mismo al WhatsApp de Walfedw y consulta la versión de tu equipo.",
+            "locucion": "Atención gente de PS4, acaban de salir nuevos parches de comunidad que desbloquean los 60 FPS reales en juegazos pesados. Gracias a estas mejoras, campañas como Red Dead Redemption 2, Bloodborne, Days Gone y God of War Ragnarok se sienten muchísimo más fluidas en tu consola. Si quieres tener tu PS4 o PS3 liberada con estas novedades y tus juegos favoritos ya instalados, escríbeme hoy mismo al WhatsApp de Walfedw y consulta la versión de tu equipo.",
             "juegos": ["Red Dead Redemption 2", "Bloodborne", "Days Gone", "God of War Ragnarok"],
             "busquedas_youtube": [
                 "PS4 GoldHEN 60fps patch showcase",
                 "Bloodborne PS4 60fps patch gameplay",
-                "Red Dead Redemption 2 PS4 60fps gameplay",
+                "Red Dead Redemption 2 PS4 gameplay",
                 "PS4 jailbreak game installation menu"
             ],
             "hashtags": "#UltimaHoraPS4 #FlasheoPS4 #PS460FPS #JuegosPS4 #Walfedw"
         },
         {
             "tema": "Novedades en mods y actualizaciones de fútbol para PS4 y PS3",
-            "gancho": "Si juegas fútbol o mundo abierto en PS4 o PS3, mira la actualización que ya está disponible.",
-            "locucion": "Si juegas fútbol o mundo abierto en PS4 o PS3, mira las últimas actualizaciones y mods que ya están disponibles para consolas liberadas. Hoy puedes disfrutar plantillas actualizadas, menús especiales y expansiones completas en títulos como EA SPORTS FC 24, Grand Theft Auto V, Ghost of Tsushima y Dragon Ball Z Kakarot. En Walfedw Services yo me encargo de flashear tu consola por software de manera cien por ciento segura. Consulta tu versión al WhatsApp.",
-            "juegos": ["EA SPORTS FC 24", "Grand Theft Auto V", "Ghost of Tsushima", "Dragon Ball Z Kakarot"],
+            "gancho": "Si juegas fútbol o campañas de mundo abierto en PS4 o PS3, mira lo que ya puedes instalar.",
+            "locucion": "Si juegas fútbol con tus amigos en casa o campañas de mundo abierto en PS4 o PS3, mira las últimas actualizaciones y mods disponibles para consolas liberadas. Hoy puedes disfrutar plantillas actualizadas, modos historia completos y expansiones en títulos como EA SPORTS FC 24, Ghost of Tsushima, Dragon Ball Z Kakarot y The Last of Us. En Walfedw Services flasheo tu consola por software de forma segura. Consulta tu versión al WhatsApp.",
+            "juegos": ["EA SPORTS FC 24", "Ghost of Tsushima", "Dragon Ball Z Kakarot", "The Last of Us Part I"],
             "busquedas_youtube": [
-                "PS4 GoldHEN payload activation tutorial",
+                "PS4 GoldHEN payload activation",
                 "PS3 HEN multiman games showcase",
                 "EA Sports FC 24 PS4 gameplay",
-                "GTA V PS4 mod menu GoldHEN"
+                "Ghost of Tsushima PS4 gameplay"
             ],
             "hashtags": "#NoticiasPS4 #FlasheoPS4 #FlasheoPS3 #ModsPS4 #Walfedw"
         }
@@ -46,7 +53,7 @@ BANCOS_POR_FORMATO = {
         {
             "tema": "Top 3 juegazos de mundo abierto que debes pedir en tu PS4",
             "gancho": "Top 3 juegazos gigantescos que sí o sí debes tener instalados en tu PS4 liberada.",
-            "locucion": "Top 3 juegazos gigantescos que sí o sí debes tener instalados en tu PS4 liberada. Número uno: Red Dead Redemption 2, una historia brutal con gráficos increíbles. Número dos: Ghost of Tsushima, combates con katana súper fluidos. Y número tres: Horizon Forbidden West con todas sus expansiones incluidas. En Walfedw Services flasheamos tu PS4 o PS3 y te instalamos el catálogo que tú elijas. Guarda este video, dime qué juegos te gustan y consulta tu versión.",
+            "locucion": "Top 3 juegazos gigantescos que sí o sí debes tener instalados en tu PS4 liberada. Número uno: Red Dead Redemption 2, una campaña brutal con gráficos increíbles. Número dos: Ghost of Tsushima, combates con katana súper fluidos. Y número tres: Horizon Forbidden West con todas sus expansiones incluidas. En Walfedw Services flasheamos tu PS4 o PS3 y te instalamos el catálogo que tú elijas. Guarda este video, dime qué juegos te gustan y consulta tu versión.",
             "juegos": ["Red Dead Redemption 2", "Ghost of Tsushima", "Horizon Forbidden West", "The Last of Us Part I"],
             "busquedas_youtube": [
                 "Red Dead Redemption 2 PS4 gameplay",
@@ -74,8 +81,8 @@ BANCOS_POR_FORMATO = {
         {
             "tema": "Mito vs Realidad: ¿Flashear tu PS4 o PS3 malogra la consola?",
             "gancho": "Mito o realidad: ¿flashear tu PS4 o PS3 malogra el lector o recalienta la consola?",
-            "locucion": "Mito o realidad: ¿flashear tu PS4 o PS3 malogra el lector o recalienta la consola? Totalmente falso. Cuando se hace por software de manera profesional, tu consola no se abre, conserva su lector intacto y hasta trabaja más fresca controlando el ventilador. Así puedes disfrutar joyas como God of War Ragnarok, Mortal Kombat 11, Sekiro y Grand Theft Auto V sin riesgos. Este fin de semana deja tu consola lista en Walfedw Services, consulta tu versión al WhatsApp.",
-            "juegos": ["God of War Ragnarok", "Mortal Kombat 11", "Sekiro Shadows Die Twice", "Grand Theft Auto V"],
+            "locucion": "Mito o realidad: ¿flashear tu PS4 o PS3 malogra el lector o recalienta la consola? Totalmente falso. Cuando se hace por software de manera profesional, tu consola no se abre, conserva su lector intacto y hasta trabaja más fresca controlando el ventilador. Así puedes disfrutar campañas como God of War Ragnarok, Sekiro y retas locales de Mortal Kombat 11 sin riesgos. Este fin de semana deja tu consola lista en Walfedw Services, escríbeme al WhatsApp.",
+            "juegos": ["God of War Ragnarok", "Mortal Kombat 11", "Sekiro Shadows Die Twice", "Days Gone"],
             "busquedas_youtube": [
                 "PS4 GoldHEN USB exploit activation",
                 "God of War Ragnarok PS4 gameplay",
@@ -87,7 +94,7 @@ BANCOS_POR_FORMATO = {
         {
             "tema": "Dudas frecuentes antes de liberar tu PS4 o PS3 este fin de semana",
             "gancho": "Las tres preguntas que más me hacen antes de traer su PS4 o PS3 a flashear.",
-            "locucion": "Las tres preguntas que más me hacen antes de traer su PS4 o PS3 a flashear. ¿Se borran mis partidas guardadas? No, tus avances se conservan. ¿Puedo jugar de a dos con mis amigos en casa? Claro que sí, todos los juegos locales funcionan al cien por ciento. Y tercero: ¿yo elijo mis juegos? Tú me dices qué títulos te gustan, como Naruto Storm 4, Resident Evil 4 o Days Gone, y te los dejo listos. Escríbeme hoy.",
+            "locucion": "Las tres preguntas que más me hacen antes de traer su PS4 o PS3 a flashear. ¿Se borran mis partidas guardadas? No, tus avances se conservan intactos. ¿Puedo jugar de a dos con mis amigos en casa? Claro que sí, todos los modos locales de dos mandos funcionan al cien por ciento. Y tercero: ¿yo elijo mis juegos? Tú me dices qué campañas te gustan, como Naruto Storm 4, Resident Evil 4 o Days Gone, y te los dejo listos. Escríbeme hoy.",
             "juegos": ["Naruto Shippuden Ultimate Ninja Storm 4", "Resident Evil 4", "Days Gone", "Bloodborne"],
             "busquedas_youtube": [
                 "Naruto Storm 4 PS4 gameplay",
@@ -119,7 +126,7 @@ def obtener_formato_dia():
         return {
             "clave": "mitos",
             "etiqueta": "MITO VS REALIDAD • FINDE GAMER",
-            "instruccion": "FORMATO MITO VS REALIDAD / DUDAS FRECUENTES: Responde una duda real de clientes sobre el flasheo de PS4/PS3 (seguridad, partidas, modo 2 jugadores) y cierra invitando a dejar la consola lista para el fin de semana."
+            "instruccion": "FORMATO MITO VS REALIDAD / DUDAS FRECUENTES: Responde una duda real de clientes sobre el flasheo de PS4/PS3 (seguridad, partidas guardadas, modo local de 2 mandos en casa) y cierra invitando a dejar la consola lista para el fin de semana."
         }
 
 def obtener_novedades_limpias(noticias_rss):
@@ -180,7 +187,7 @@ def generar_guion(noticias):
     juegos_usados = ", ".join(historial["juegos"][-12:]) or "Ninguno aún"
 
     prompt = f"""
-    Eres el guionista en ESPAÑOL LATINO y director de edición de TikTok para WALFEDW SERVICES (@walfedw23).
+    Eres el guionista en ESPAÑOL LATINO (Perú) y director de edición de TikTok para WALFEDW SERVICES (@walfedw23).
     Hablas en primera persona: "Yo me encargo de flashear tu consola e instalarte los juegos que tú elijas".
 
     {formato['instruccion']}
@@ -197,13 +204,14 @@ def generar_guion(noticias):
     JUEGOS USADOS RECIENTEMENTE (ELIGE OTROS DISTINTOS):
     {juegos_usados}
 
-    REGLAS OBLIGATORIAS:
-    1. PRIORIDAD CONSOLAS: 80% enfoque en **PS4** y 20% en **PS3**. Menciona **PS5** solo de paso o ni lo menciones.
-    2. JUEGOS COMPATIBLES: Elige 4 juegazos reales de **PS4** (o clásicos de **PS3**). PROHIBIDO exclusivos solo de PS5 (nada de Spider-Man 2 ni Black Myth Wukong).
-    3. EXTENSIÓN: Entre 75 y 90 palabras.
-    4. Escribe siempre "cien por ciento" en letras (NUNCA uses %).
-    5. Genera también 4 búsquedas en inglés para YouTube ("busquedas_youtube") que correspondan exactamente a lo que dice el guion (ej. menús de GoldHEN/HEN, parches 60 FPS y gameplays de los juegos mencionados).
-    6. PROHIBIDO mencionar Nintendo Switch y PROHIBIDO mencionar números de firmware.
+    REGLAS TÉCNICAS Y DE COHERENCIA OBLIGATORIAS:
+    1. VERDAD TÉCNICA DEL FLASHEO: Una PS4 o PS3 flasheada (con GoldHEN o HEN) es 100% para **campañas completas offline con todos sus DLC** y **multijugador local en casa (de 2 a 4 mandos en la misma consola)**. JAMÁS digas que se puede jugar "en línea", "online" ni conectar a PSN.
+    2. PRIORIDAD CONSOLAS: 80% enfoque en **PS4** y 20% en **PS3**. Menciona **PS5** solo de paso o ni lo menciones.
+    3. JUEGOS COMPATIBLES: Elige 4 juegazos reales de **PS4** (o clásicos de **PS3**). PROHIBIDO exclusivos solo de PS5 (nada de Spider-Man 2 ni Black Myth Wukong).
+    4. ESPAÑOL NATURAL Y DIRECTO: Escribe frases 100% naturales en español latino. Prohibido traducir modismos raros del inglés.
+    5. EXTENSIÓN: Entre 75 y 90 palabras. Escribe siempre "cien por ciento" en letras (NUNCA uses %).
+    6. Genera también 4 búsquedas en inglés para YouTube ("busquedas_youtube") que muestren menús de GoldHEN/HEN, parches 60 FPS o gameplays de campaña (NUNCA busques trailers de juegos online).
+    7. PROHIBIDO mencionar Nintendo Switch y PROHIBIDO mencionar números de firmware.
 
     DEVUELVE SOLO ESTE JSON PURO:
     {{
@@ -221,7 +229,7 @@ def generar_guion(noticias):
 
     for intento in range(1, 4):
         try:
-            print(f"Intento {intento}: generando guion y pauta de edición [{formato['clave'].upper()}]...")
+            print(f"Intento {intento}: generando guion coherente [{formato['clave'].upper()}]...")
             response = requests.post(
                 "https://text.pollinations.ai/",
                 json={"messages": [{"role": "user", "content": prompt}], "jsonMode": True},
@@ -242,9 +250,9 @@ def generar_guion(noticias):
                 busquedas_yt = datos.get("busquedas_youtube", [])
 
                 es_repetido = any(gancho.lower()[:25] in prev.lower() for prev in historial["ganchos"])
-                tiene_bloqueadas = any(b in loc.lower() for b in ("do not", "fpkgs", "switch", "nintendo", "spider-man 2", "wukong"))
+                tiene_incoherencia = any(bad in loc.lower() for bad in FRASES_INCOHERENTES)
 
-                if len(loc.split()) >= 65 and not es_repetido and not tiene_bloqueadas and len(juegos) >= 3:
+                if len(loc.split()) >= 65 and not es_repetido and not tiene_incoherencia and len(juegos) >= 3:
                     datos["locucion_completa"] = loc
                     datos["formato_dia"] = formato["clave"]
                     datos["etiqueta_formato"] = formato["etiqueta"]
@@ -253,6 +261,8 @@ def generar_guion(noticias):
                     guardar_historial(tema, gancho, juegos)
                     print(f"Guion IA aprobado [{formato['clave']}]: {tema}")
                     return datos
+                elif tiene_incoherencia:
+                    print("Guion rechazado por mencionar juego online o frase incoherente. Reintentando...")
         except Exception as e:
             print(f"Advertencia intento {intento}: {e}")
             time.sleep(1)
