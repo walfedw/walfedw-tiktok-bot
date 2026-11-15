@@ -11,7 +11,6 @@ import asyncio
 import subprocess
 import requests
 import edge_tts
-from playwright.sync_api import sync_playwright
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import (
     VideoFileClip,
@@ -49,7 +48,7 @@ def limpiar_texto(texto):
     return re.sub(r'[^\w\s.,¡!¿?áéíóúÁÉÍÓÚñÑ\-]', '', texto).strip()
 
 async def generar_audio_con_tiempos(texto, archivo_salida):
-    """Genera locución natural y captura el timestamp exacto de cada palabra."""
+    """Genera locución natural y captura el tiempo exacto de cada palabra."""
     texto_limpio = limpiar_texto(texto)
     voces_rotadas = list(VOCES)
     random.shuffle(voces_rotadas)
@@ -121,7 +120,7 @@ def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=24, duracion
     return False
 
 def descargar_gameplay_real_steam(juegos_solicitados, max_clips=6):
-    """Extrae hasta 6 clips de gameplay real entrando desde el segundo 22-45 para evitar intros y citas."""
+    """Extrae hasta 6 clips de gameplay real entrando desde el segundo 22 al 42."""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     cookies_edad = {"birthtime": "568022401", "lastagecheckage": "1-0-1988", "mature_content": "1"}
     clips_listos = []
@@ -153,7 +152,6 @@ def descargar_gameplay_real_steam(juegos_solicitados, max_clips=6):
             if not movies:
                 continue
 
-            # Preferir el segundo tráiler si existe (suele ser Gameplay Trailer puro)
             trailer = movies[1] if len(movies) > 1 else movies[0]
             stream_url = (
                 trailer.get("mp4", {}).get("480")
@@ -165,7 +163,6 @@ def descargar_gameplay_real_steam(juegos_solicitados, max_clips=6):
                 continue
 
             ruta_mp4 = f"temp_gp_{idx}.mp4"
-            # Entrar entre el segundo 22 y 42 donde los tráilers ya muestran combate/gameplay puro
             inicio_accion = random.randint(22, 42)
             print(f"Extrayendo gameplay en acción de {juego} (desde {inicio_accion}s)...")
             if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio_accion, duracion=8):
@@ -195,13 +192,12 @@ def descargar_fotos_ultimo_recurso(juegos_solicitados):
     return fotos
 
 def obtener_recursos_visuales(juegos_solicitados):
-    """Prioriza 6+ gameplays en acción e intercala tus clips locales sin saturar."""
+    """Combina 6+ gameplays en acción con tus clips locales."""
     clips_locales = buscar_clips_locales()
     clips_steam = descargar_gameplay_real_steam(juegos_solicitados, max_clips=6)
 
     if clips_steam:
         mezcla = []
-        # Poner 1 clip de GoldHEN/consola al inicio, luego 3 gameplays, luego el otro clip local, y más gameplays
         if len(clips_locales) >= 1:
             mezcla.append(clips_locales[0])
         mezcla.extend(clips_steam[:3])
@@ -225,7 +221,7 @@ def ajustar_a_vertical_hd(clip, target_w=720, target_h=1280):
     return clip.crop(x_center=clip.w / 2, y_center=clip.h / 2, width=target_w, height=target_h)
 
 def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
-    """Corta y mutea todos los clips con ritmo dinámico de 2.1s a 2.5s para cubrir 30+ segundos."""
+    """Corta y mutea todos los clips con ritmo dinámico de 2.1s a 2.5s."""
     secuencia = []
     tiempo_acumulado = 0.0
     clips_abiertos = []
@@ -256,7 +252,6 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
                 v = VideoFileClip(ruta).without_audio()
                 clips_abiertos.append(v)
 
-                # Usar distintos tramos del clip si vuelve a salir
                 ciclo = indice // len(pool)
                 offset_ciclo = (ciclo * 2.5) % max(0.5, v.duration - dur_corte)
                 max_start = max(0.0, v.duration - dur_corte - 0.1)
@@ -297,15 +292,15 @@ def crear_overlay_marca_persistente(duracion):
     draw.text((360, 74), "@WALFEDW • WALFEDW SERVICES", fill=(255, 255, 255, 255), anchor="mm", font=f_brand)
     draw.text((360, 102), "FLASHEO Y JUEGOS • PS3 • PS4 • PS5", fill=(0, 220, 255, 255), anchor="mm", font=f_sub)
 
-    draw.rounded_rectangle([110, 1140, 610, 1192], radius=18, fill=(8, 15, 30, 205), outline=(255, 225, 0, 220), width=2)
-    draw.text((360, 1166), "WHATSAPP: 914 899 697 • IG: @walfedw23", fill=(255, 230, 0, 255), anchor="mm", font=f_sub)
+    draw.rounded_rectangle([90, 1140, 630, 1192], radius=18, fill=(8, 15, 30, 205), outline=(255, 225, 0, 220), width=2)
+    draw.text((360, 1166), "CONSULTA TU VERSIÓN • WA: 914 899 697", fill=(255, 230, 0, 255), anchor="mm", font=f_sub)
 
     ruta_png = "temp_brand_overlay.png"
     img.save(ruta_png)
     return ImageClip(ruta_png).set_duration(duracion), ruta_png
 
 def renderizar_frame_subtitulo(palabras_grupo, indice_activo, idx_frame):
-    """Dibuja subtítulos CapCut autoescalando la fuente si las palabras son muy largas (cero recortes)."""
+    """Subtítulos estilo CapCut autoescalados para que nunca se corten a los lados."""
     ancho, alto = 720, 220
     img = Image.new("RGBA", (ancho, alto), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -391,138 +386,86 @@ def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
 
     return clips_subs, archivos_temp
 
-def generar_flyer_profesional_hd(salida_png="temp_flyer_pro.png"):
-    """Tarjeta HD de cierre para WALFEDW SERVICES (100% PlayStation, sin foto de Switch)."""
-    html = """<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-  body {
-    width: 720px; height: 1280px;
-    background: radial-gradient(circle at 50% 22%, #0d3266 0%, #050811 75%);
-    color: #fff;
-    display: flex; flex-direction: column; justify-content: space-between;
-    padding: 58px 38px;
-  }
-  .top-badge {
-    background: rgba(0, 210, 255, 0.15);
-    border: 2px solid #00d2ff;
-    color: #00d2ff;
-    font-size: 22px; font-weight: 900; letter-spacing: 3px;
-    padding: 12px 26px; border-radius: 50px;
-    text-align: center; align-self: center;
-    box-shadow: 0 0 25px rgba(0, 210, 255, 0.45);
-  }
-  .hero { text-align: center; }
-  .ps-emblem {
-    width: 140px; height: 140px; border-radius: 50%;
-    margin: 0 auto 20px auto;
-    background: linear-gradient(135deg, #0072ff, #00d2ff);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 56px; font-weight: 900; color: #050811;
-    box-shadow: 0 0 40px rgba(0, 210, 255, 0.8);
-  }
-  .title {
-    font-size: 68px; font-weight: 900; letter-spacing: 2px;
-    line-height: 1.05;
-    text-shadow: 0 0 28px rgba(0, 210, 255, 0.85);
-  }
-  .subtitle {
-    font-size: 34px; font-weight: 900; color: #ffe600;
-    letter-spacing: 5px; margin-top: 8px;
-  }
-  .consoles-bar {
-    background: linear-gradient(90deg, #0072ff, #00d2ff, #0072ff);
-    color: #04070f;
-    font-size: 38px; font-weight: 900; letter-spacing: 5px;
-    padding: 18px; border-radius: 18px;
-    text-align: center; margin: 26px 0 0 0;
-    box-shadow: 0 0 32px rgba(0, 210, 255, 0.65);
-  }
-  .features {
-    background: rgba(15, 23, 42, 0.9);
-    border: 2px solid rgba(0, 210, 255, 0.55);
-    border-radius: 24px;
-    padding: 28px;
-    display: flex; flex-direction: column; gap: 18px;
-  }
-  .feat-item {
-    font-size: 26px; font-weight: 800; color: #f8fafc;
-    display: flex; align-items: center; gap: 14px;
-  }
-  .dot {
-    width: 16px; height: 16px; border-radius: 50%;
-    background: #ffe600; box-shadow: 0 0 12px #ffe600;
-    flex-shrink: 0;
-  }
-  .contact-box {
-    background: #ffffff; color: #050811;
-    border-radius: 24px; padding: 26px;
-    text-align: center;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.85);
-  }
-  .wa-label { font-size: 21px; font-weight: 900; color: #16a34a; letter-spacing: 1px; }
-  .wa-num { font-size: 48px; font-weight: 900; color: #050811; margin: 4px 0; }
-  .ig-handle { font-size: 26px; font-weight: 800; color: #e11d48; }
-</style>
-</head>
-<body>
-  <div class="top-badge">CALIDAD • RAPIDEZ • CONFIANZA</div>
-  <div class="hero">
-    <div class="ps-emblem">W</div>
-    <div class="title">WALFEDW</div>
-    <div class="subtitle">SERVICES</div>
-    <div class="consoles-bar">PS3 • PS4 • PS5</div>
-  </div>
-  <div class="features">
-    <div class="feat-item"><span class="dot"></span>FLASHEO 100% SEGURO POR SOFTWARE</div>
-    <div class="feat-item"><span class="dot"></span>INSTALACIÓN DE JUEGOS Y DLC</div>
-    <div class="feat-item"><span class="dot"></span>PARCHES 60 FPS Y MODS EXCLUSIVOS</div>
-    <div class="feat-item"><span class="dot"></span>GARANTÍA Y RESPALDO TÉCNICO</div>
-  </div>
-  <div class="contact-box">
-    <div class="wa-label">ESCRÍBENOS AL WHATSAPP</div>
-    <div class="wa-num">914 899 697</div>
-    <div class="ig-handle">INSTAGRAM: @walfedw23</div>
-  </div>
-</body>
-</html>"""
+def obtener_clip_flyer_cierre(duracion_flyer=4.0):
+    """Encuadra tu flyer.png de GitHub SIN recortarlo dentro de una tarjeta vertical HD con tus datos."""
+    canvas_w, canvas_h = 720, 1280
+    lienzo = Image.new("RGB", (canvas_w, canvas_h), (8, 12, 26))
+    draw = ImageDraw.Draw(lienzo)
 
-    html_tmp = "temp_flyer_card.html"
-    with open(html_tmp, "w", encoding="utf-8") as f:
-        f.write(html)
+    # Fondo degradado azul/morado neón sutil
+    for y in range(canvas_h):
+        r = int(12 + 18 * (1 - abs(y - 640) / 640))
+        g = int(16 + 24 * (1 - abs(y - 640) / 640))
+        b = int(38 + 45 * (1 - abs(y - 640) / 640))
+        draw.line([(0, y), (canvas_w, y)], fill=(r, g, b))
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": 720, "height": 1280})
-            page.goto(f"file://{os.path.abspath(html_tmp)}")
-            page.screenshot(path=salida_png)
-            browser.close()
-        if os.path.exists(html_tmp):
-            os.remove(html_tmp)
-        return salida_png
-    except Exception as e:
-        print(f"Advertencia renderizando flyer HTML: {e}")
-        return None
+        f_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 52)
+        f_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
+        f_cta = ImageFont.truetype("DejaVuSans-Bold.ttf", 25)
+        f_wa = ImageFont.truetype("DejaVuSans-Bold.ttf", 44)
+        f_ig = ImageFont.truetype("DejaVuSans-Bold.ttf", 26)
+    except:
+        f_title = f_sub = f_cta = f_wa = f_ig = ImageFont.load_default()
 
-def obtener_clip_flyer_cierre(duracion_flyer=3.5):
-    """Usa flyer_limpio.png si lo subes en el futuro, o la tarjeta profesional HD (ignora el flyer viejo con Switch)."""
-    if os.path.exists("flyer_limpio.png"):
-        clip_img = ImageClip("flyer_limpio.png").set_duration(duracion_flyer)
-        clip_img = ajustar_a_vertical_hd(clip_img, 720, 1280)
-        return clip_img.resize(lambda t: 1.04 - 0.04 * (t / duracion_flyer)).set_position(("center", "center"))
+    # Encabezado superior
+    draw.text((360, 105), "WALFEDW SERVICES", fill=(255, 255, 255), anchor="mm", font=f_title)
+    draw.rounded_rectangle([95, 148, 625, 198], radius=16, fill=(0, 210, 255))
+    draw.text((360, 173), "FLASHEO E INSTALACIÓN DE JUEGOS", fill=(5, 10, 20), anchor="mm", font=f_cta)
 
-    png_generado = generar_flyer_profesional_hd("temp_flyer_pro.png")
-    if png_generado and os.path.exists(png_generado):
-        clip_img = ImageClip(png_generado).set_duration(duracion_flyer)
-        return clip_img.resize(lambda t: 1.03 - 0.03 * (t / duracion_flyer)).set_position(("center", "center"))
+    # Insertar tu flyer.png (o flyer.jpg / walfedw.jpg) completo sin recortar nada
+    ruta_flyer = None
+    for candidato in ["flyer.png", "flyer.jpg", "walfedw.jpg"]:
+        if os.path.exists(candidato):
+            ruta_flyer = candidato
+            break
 
-    img = Image.new("RGB", (720, 1280), (8, 14, 28))
-    img.save("temp_flyer_fallback.png")
-    return ImageClip("temp_flyer_fallback.png").set_duration(duracion_flyer)
+    y_fin_imagen = 650
+    if ruta_flyer:
+        print(f"Integrando tu imagen oficial completa de GitHub: {ruta_flyer}")
+        foto = Image.open(ruta_flyer).convert("RGB")
+        fw, fh = foto.size
+        # Ajustar proporcionalmente al ancho 672px manteniendo toda la imagen visible
+        nuevo_w = 672
+        nuevo_h = int(fh * (nuevo_w / fw))
+        if nuevo_h > 540:
+            nuevo_h = 540
+            nuevo_w = int(fw * (nuevo_h / fh))
+
+        resample_mode = getattr(Image, "Resampling", Image).LANCZOS
+        foto_resized = foto.resize((nuevo_w, nuevo_h), resample_mode)
+
+        x_pos = (canvas_w - nuevo_w) // 2
+        y_pos = 235
+
+        # Marco neón brillante alrededor de tu flyer
+        draw.rounded_rectangle(
+            [x_pos - 6, y_pos - 6, x_pos + nuevo_w + 6, y_pos + nuevo_h + 6],
+            radius=22,
+            outline=(0, 210, 255),
+            width=6
+        )
+        lienzo.paste(foto_resized, (x_pos, y_pos))
+        y_fin_imagen = y_pos + nuevo_h + 32
+
+    # Bloque comercial debajo de tu foto
+    draw.rounded_rectangle([45, y_fin_imagen, 675, y_fin_imagen + 135], radius=22, fill=(15, 25, 48), outline=(255, 230, 0), width=3)
+    draw.text((360, y_fin_imagen + 36), "• CONSULTA LA VERSIÓN DE TU CONSOLA", fill=(255, 230, 0), anchor="mm", font=f_cta)
+    draw.text((360, y_fin_imagen + 76), "• DIME QUÉ JUEGOS TE GUSTAN", fill=(255, 255, 255), anchor="mm", font=f_cta)
+    draw.text((360, y_fin_imagen + 112), "PS3 • PS4 • PS5 • 100% SEGURO", fill=(0, 220, 255), anchor="mm", font=f_sub)
+
+    # Tarjeta blanca de contacto directo
+    y_contacto = y_fin_imagen + 160
+    draw.rounded_rectangle([45, y_contacto, 675, y_contacto + 175], radius=24, fill=(255, 255, 255))
+    draw.text((360, y_contacto + 32), "ESCRÍBENOS AL WHATSAPP", fill=(22, 163, 74), anchor="mm", font=f_cta)
+    draw.text((360, y_contacto + 82), "914 899 697", fill=(5, 8, 17), anchor="mm", font=f_wa)
+    draw.text((360, y_contacto + 136), "INSTAGRAM: @walfedw23", fill=(225, 29, 72), anchor="mm", font=f_ig)
+
+    salida_tmp = "temp_flyer_github_card.png"
+    lienzo.save(salida_tmp)
+
+    clip_img = ImageClip(salida_tmp).set_duration(duracion_flyer)
+    return clip_img.resize(lambda t: 1.03 - 0.03 * (t / duracion_flyer)).set_position(("center", "center"))
 
 def descargar_musica_fondo():
     archivo_bgm = "bgm.mp3"
@@ -541,7 +484,7 @@ def descargar_musica_fondo():
 def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     locucion = datos_guion.get(
         "locucion_completa",
-        "¿Sigues pagando precios absurdos por cada juego nuevo en tienda? Con lo que gastas en un solo disco, en Walfedw Services liberamos tu consola completa por software y sin riesgos."
+        "¿Ya te enteraste de las últimas novedades para flashear tu PlayStation? En Walfedw Services yo me encargo de flashear tu consola e instalarte los mejores títulos. Consulta tu versión y dime qué juegos te gustan."
     )
     juegos_visuales = datos_guion.get(
         "juegos_visuales",
@@ -553,7 +496,6 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     tiempos_palabras = asyncio.run(generar_audio_con_tiempos(locucion, audio_voz_path))
     audio_voz = AudioFileClip(audio_voz_path).volumex(1.25)
 
-    # Añadir 0.6s extra de respiro al final de la voz para que la última frase termine completa
     duracion_escena_principal = max(27.0, audio_voz.duration + 0.6)
 
     print("2. Extrayendo 6+ gameplays en acción...")
@@ -569,8 +511,8 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
         size=(720, 1280)
     ).set_audio(audio_voz)
 
-    print("4. Añadiendo cierre comercial HD (3.5s) para superar los 30 segundos...")
-    clip_flyer = obtener_clip_flyer_cierre(duracion_flyer=3.5)
+    print("4. Cerrando con tu flyer.png oficial de GitHub (4.0s)...")
+    clip_flyer = obtener_clip_flyer_cierre(duracion_flyer=4.0)
     video_completo = concatenate_videoclips([escena_principal, clip_flyer], method="compose")
 
     print("5. Mezclando música de fondo suave (9% volumen)...")
@@ -607,7 +549,7 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
             pass
 
     temporales = (
-        [audio_voz_path, "temp_bg_black.png", "temp_flyer_fallback.png", "temp_flyer_pro.png", ruta_marca_png]
+        [audio_voz_path, "temp_bg_black.png", "temp_flyer_github_card.png", ruta_marca_png]
         + archivos_subs_temp
         + glob.glob("temp_gp_*.mp4")
         + glob.glob("temp_fallback_poster_*.jpg")
