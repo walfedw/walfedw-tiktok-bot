@@ -15,34 +15,34 @@ PALABRAS_BLOQUEADAS_FEED = (
 
 NOVEDADES_CURADAS_SPANISH = [
     {
-        "tema": "Lanzamiento de Black Myth Wukong y joyas de acción",
-        "gancho": "¿Ya viste el nivel gráfico de los últimos estrenos que están rompiendo PlayStation?",
-        "detalle": "títulos de nueva generación como Black Myth Wukong y Tekken 8",
-        "juegos": ["Black Myth Wukong", "Tekken 8", "God of War Ragnarok", "Ghost of Tsushima"]
+        "tema": "Juegazos de acción y mundo abierto para PS4 y PS3",
+        "gancho": "¿Tienes una PS4 o PS3 en casa y sigues pagando carísimo por cada juego?",
+        "detalle": "aventuras gigantescas y catálogos completos listos para jugar sin discos",
+        "juegos": ["God of War Ragnarok", "Ghost of Tsushima", "Red Dead Redemption 2", "Days Gone"]
     },
     {
-        "tema": "Parches a 60 FPS en clásicos de PS4",
-        "gancho": "¿Sabías que puedes correr juegos pesados de PS4 a 60 FPS reales en tu consola?",
-        "detalle": "los nuevos parches de desbloqueo de cuadros por segundo en mundos abiertos",
-        "juegos": ["Red Dead Redemption 2", "Bloodborne", "Days Gone", "Grand Theft Auto V"]
+        "tema": "Parches a 60 FPS y mejoras en PS4 liberada",
+        "gancho": "¿Sabías que en tu PS4 puedes activar parches a 60 FPS y menús de mods exclusivos?",
+        "detalle": "las mejoras de fluidez y rendimiento que desbloquean todo el poder de tu consola",
+        "juegos": ["Red Dead Redemption 2", "Bloodborne", "Grand Theft Auto V", "The Last of Us Part I"]
     },
     {
-        "tema": "Remakes de terror y supervivencia en PlayStation",
-        "gancho": "Los remakes de terror más esperados ya están disponibles para disfrutar sin límites.",
-        "detalle": "el regreso de clásicos brutales como Silent Hill 2 y Resident Evil 4",
-        "juegos": ["Silent Hill 2", "Resident Evil 4", "The Last of Us Part I", "Cyberpunk 2077"]
+        "tema": "Terror y supervivencia al máximo en PS4",
+        "gancho": "Si te gustan los juegos de terror y acción intensa, mira lo que puedes instalar en tu PS4.",
+        "detalle": "títulos cargados de adrenalina con todos sus DLC y expansiones incluidas",
+        "juegos": ["Resident Evil 4", "Cyberpunk 2077", "Elden Ring", "Mortal Kombat 11"]
     },
     {
-        "tema": "Nuevos juegos de pelea y anime en consola",
-        "gancho": "Si eres fanático de los juegos de pelea y anime, mira lo que puedes tener en tu consola.",
-        "detalle": "estrenos explosivos como Dragon Ball Sparking Zero y Mortal Kombat 1",
-        "juegos": ["Dragon Ball Sparking Zero", "Mortal Kombat 1", "Marvels Spider-Man 2", "Elden Ring"]
+        "tema": "Peleas, fútbol y anime para jugar con amigos en PS4 y PS3",
+        "gancho": "Convierte tu PS4 o PS3 en la consola definitiva para jugar con tus patas este fin de semana.",
+        "detalle": "los mejores títulos de fútbol, peleas y anime listos en tu disco duro",
+        "juegos": ["Dragon Ball Z Kakarot", "Naruto Shippuden Ultimate Ninja Storm 4", "Marvels Spider-Man Remastered", "EA SPORTS FC 24"]
     },
     {
-        "tema": "Aventura y mundo abierto en PS4 y PS5",
-        "gancho": "¿Sigues pagando precios altísimos por cada juego nuevo en tienda?",
-        "detalle": "aventuras gigantescas como Horizon Forbidden West y Spider-Man 2",
-        "juegos": ["Horizon Forbidden West", "Marvels Spider-Man 2", "Uncharted Legacy of Thieves", "God of War Ragnarok"]
+        "tema": "Rescate total de consolas PS4 y PS3 guardadas",
+        "gancho": "Si tienes tu PS4 o PS3 juntando polvo en tu cuarto, dale una segunda vida hoy mismo.",
+        "detalle": "la liberación por software más limpia y segura para llenar tu consola de éxitos",
+        "juegos": ["Horizon Forbidden West", "Sekiro Shadows Die Twice", "Dark Souls III", "Grand Theft Auto V"]
     }
 ]
 
@@ -94,7 +94,7 @@ def guardar_historial(tema, gancho, juegos):
 
 def generar_guion(noticias):
     titulares_rss = obtener_novedades_limpias(noticias)
-    bloque_rss = "\n".join([f"- {t}" for t in titulares_rss]) or "- Nuevos lanzamientos y mejoras de rendimiento en PlayStation"
+    bloque_rss = "\n".join([f"- {t}" for t in titulares_rss]) or "- Nuevos parches y catálogos disponibles para PS4 y PS3"
 
     historial = cargar_historial()
     temas_usados = "\n".join([f"- {t}" for t in historial["temas"][-20:]]) or "Ninguno aún"
@@ -108,7 +108,7 @@ def generar_guion(noticias):
     Hoy es {fecha_hoy}. Eres el guionista en ESPAÑOL LATINO de TikTok para WALFEDW SERVICES (@walfedw23).
     Hablas en primera persona: "Yo me encargo de flashear tu consola e instalarte los juegos que tú elijas".
 
-    NOTICIAS EN ESPAÑOL DE REFERENCIA:
+    NOTICIAS DE REFERENCIA:
     {bloque_rss}
 
     TEMAS YA USADOS (PROHIBIDO REPETIR):
@@ -120,29 +120,30 @@ def generar_guion(noticias):
     JUEGOS USADOS RECIENTEMENTE (ELIGE OTROS DISTINTOS):
     {juegos_usados}
 
-    REGLAS OBLIGATORIAS:
-    1. TODO EL GUION DEBE ESTAR EN ESPAÑOL NATURAL (prohibido pegar frases en inglés).
-    2. EXTENSIÓN: Entre 75 y 90 palabras (para que el video dure de 30 a 35 segundos).
-    3. Abre con un gancho atractivo sobre novedades, lanzamientos o ahorro en PlayStation (nunca empieces con el nombre de la marca).
-    4. Explica que en Walfedw Services tú flasheas la consola por software de manera cien por ciento segura (escribe "cien por ciento" en palabras, nunca uses el símbolo %) e instalas el catálogo que el cliente pida.
-    5. Menciona 4 juegazos reales de PlayStation (nunca digas que PS3 corre juegos de PS4/PS5).
-    6. Cierra invitando a escribir al WhatsApp o Instagram de Walfedw, consultar la versión de su consola y decir qué juegos le gustan.
-    7. PROHIBIDO mencionar Nintendo Switch y PROHIBIDO mencionar números de versión/firmware.
+    REGLAS OBLIGATORIAS DE PRIORIDAD DE CONSOLAS:
+    1. ENFOQUE PRINCIPAL: Dale 80% de protagonismo a **PS4** y 20% a **PS3** (son nuestros clientes principales). Menciona **PS5** solo de paso al final como "y también soportamos PS5", o ni siquiera le des peso.
+    2. JUEGOS COMPATIBLES: Elige 4 juegazos reales que existan en **PS4** (y clásicos en **PS3**). PROHIBIDO poner exclusivos que solo existen en PS5 (nada de Spider-Man 2 ni Black Myth Wukong).
+    3. TODO EN ESPAÑOL NATURAL (cero frases en inglés).
+    4. EXTENSIÓN: Entre 75 y 90 palabras (para que el video dure de 30 a 35 segundos).
+    5. Abre con un gancho directo dirigido a dueños de PS4 o PS3 (nunca empieces con el nombre de la marca).
+    6. Explica que en Walfedw Services tú flasheas la consola por software de manera cien por ciento segura (escribe "cien por ciento" en palabras, nunca uses %) e instalas los juegos, DLC y parches a 60 FPS que pidan.
+    7. Cierra invitando a escribir al WhatsApp o Instagram de Walfedw, consultar la versión de su consola y decir qué juegos le gustan.
+    8. PROHIBIDO mencionar Nintendo Switch y PROHIBIDO mencionar números de versión/firmware.
 
     DEVUELVE SOLO ESTE JSON PURO:
     {{
-        "tema_novedad": "Resumen corto de la novedad de hoy",
+        "tema_novedad": "Resumen corto del tema de hoy",
         "titulo_general": "Título del video",
         "gancho": "Primera frase del guion",
         "locucion_completa": "Texto completo en español fluido de 75 a 90 palabras.",
-        "juegos_visuales": ["Juego 1", "Juego 2", "Juego 3", "Juego 4"],
-        "hashtags": "#FlasheoPS4 #PS4Flasheada #PlayStation #JuegosPS4 #Walfedw"
+        "juegos_visuales": ["Juego PS4 1", "Juego PS4 2", "Juego PS4 3", "Juego PS4 4"],
+        "hashtags": "#FlasheoPS4 #PS4Flasheada #FlasheoPS3 #JuegosPS4 #Walfedw"
     }}
     """
 
     for intento in range(1, 4):
         try:
-            print(f"Intento {intento}: generando guion en español basado en novedades...")
+            print(f"Intento {intento}: generando guion enfocado en PS4 y PS3...")
             response = requests.post(
                 "https://text.pollinations.ai/",
                 json={"messages": [{"role": "user", "content": prompt}], "jsonMode": True},
@@ -162,18 +163,17 @@ def generar_guion(noticias):
                 juegos = datos.get("juegos_visuales", [])
 
                 es_repetido = any(gancho.lower()[:25] in prev.lower() for prev in historial["ganchos"])
-                tiene_bloqueadas = any(b in loc.lower() for b in ("do not", "fpkgs", "switch", "nintendo"))
+                tiene_bloqueadas = any(b in loc.lower() for b in ("do not", "fpkgs", "switch", "nintendo", "spider-man 2", "wukong"))
 
                 if len(loc.split()) >= 65 and not es_repetido and not tiene_bloqueadas and len(juegos) >= 3:
                     datos["locucion_completa"] = loc
                     guardar_historial(tema, gancho, juegos)
-                    print(f"Guion IA aprobado: {tema} | Juegos: {juegos}")
+                    print(f"Guion IA aprobado (PS4/PS3): {tema} | Juegos: {juegos}")
                     return datos
         except Exception as e:
             print(f"Advertencia intento {intento}: {e}")
             time.sleep(2)
 
-    # Respaldo rotativo 100% en español natural si la API externa tarda
     disponibles = [c for c in NOVEDADES_CURADAS_SPANISH if c["tema"] not in historial["temas"]]
     if not disponibles:
         disponibles = NOVEDADES_CURADAS_SPANISH
@@ -182,9 +182,9 @@ def generar_guion(noticias):
     j_lista = ", ".join(elegido["juegos"][:3]) + " y " + elegido["juegos"][3]
     loc_final = (
         f"{elegido['gancho']} "
-        f"Con las últimas novedades en {elegido['detalle']}, en Walfedw Services yo me encargo de flashear tu consola por software de manera cien por ciento segura e instalarte el catálogo que tú elijas. "
-        f"Desde clásicos en PS3 hasta los estrenos más pesados en PS4 y PS5 como {j_lista}, dime qué juegos te gustan y te los dejo listos. "
-        f"Escríbeme hoy mismo al WhatsApp o Instagram de Walfedw y consulta la versión de tu consola."
+        f"Con {elegido['detalle']}, en Walfedw Services yo me encargo de flashear tu PS4 o PS3 por software de manera cien por ciento segura e instalarte el catálogo que tú elijas, y también damos soporte para PS5. "
+        f"Disfruta joyas brutales como {j_lista} listas para jugar sin restricciones. "
+        f"Dime qué juegos te gustan, escríbeme hoy mismo al WhatsApp o Instagram de Walfedw y consulta la versión de tu consola."
     )
 
     guardar_historial(elegido["tema"], elegido["gancho"], elegido["juegos"])
@@ -194,5 +194,5 @@ def generar_guion(noticias):
         "gancho": elegido["gancho"],
         "locucion_completa": loc_final,
         "juegos_visuales": elegido["juegos"],
-        "hashtags": "#FlasheoPS4 #FlasheoPS5 #NovedadesPlayStation #JuegosPS4 #Walfedw"
+        "hashtags": "#FlasheoPS4 #PS4Flasheada #FlasheoPS3 #JuegosPS4 #Walfedw"
     }
