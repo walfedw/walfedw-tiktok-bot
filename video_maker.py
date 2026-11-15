@@ -25,7 +25,6 @@ from moviepy.editor import (
 VOCES = ["es-MX-JorgeNeural", "es-MX-DarianNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
-# Mapa de AppIDs para descargar clips de GAMEPLAY REAL (.mp4) y pósteres HD
 STEAM_APP_IDS = {
     "god of war ragnarok": "2322010",
     "god of war": "1593500",
@@ -52,14 +51,14 @@ def limpiar_texto(texto):
     return re.sub(r'[^\w\s.,¡!¿?áéíóúÁÉÍÓÚñÑ\-]', '', texto).strip()
 
 async def generar_audio_con_tiempos(texto, archivo_salida):
-    """Genera locución con rotación de voz y captura el tiempo exacto de cada palabra."""
+    """Genera locución energética y captura el tiempo exacto de cada palabra."""
     texto_limpio = limpiar_texto(texto)
     voces_rotadas = list(VOCES)
     random.shuffle(voces_rotadas)
 
     for voz in voces_rotadas:
         try:
-            communicate = edge_tts.Communicate(texto_limpio, voz, rate="+6%")
+            communicate = edge_tts.Communicate(texto_limpio, voz, rate="+8%")
             tiempos_palabras = []
             with open(archivo_salida, "wb") as f:
                 async for chunk in communicate.stream():
@@ -80,6 +79,88 @@ async def generar_audio_con_tiempos(texto, archivo_salida):
             print(f"Advertencia con voz {voz}: {e}")
     raise RuntimeError("No se pudo generar el audio de locución.")
 
+def buscar_clips_locales():
+    """Detecta 'clip 1', 'clip 2', etc. tanto en clips/ como en la raíz del repositorio."""
+    exts_validas = (".mp4", ".mov", ".mkv", ".webm", ".jpg", ".jpeg", ".png")
+    excluidos = {"noticia_tiktok.mp4", "walfedw.jpg", "walfedw.png", "flyer.jpg", "flyer.png"}
+    encontrados = []
+
+    # 1. Buscar todo dentro de la carpeta clips/
+    if os.path.isdir("clips"):
+        for archivo in sorted(os.listdir("clips")):
+            ruta = os.path.join("clips", archivo)
+            if os.path.isfile(ruta) and archivo.lower().endswith(exts_validas):
+                encontrados.append(ruta)
+
+    # 2. Buscar en la carpeta principal archivos que empiecen con 'clip' (ej: 'clip 1.mp4', 'clip2.mp4')
+    for archivo in sorted(os.listdir(".")):
+        if os.path.isfile(archivo) and archivo.lower() not in excluidos:
+            if archivo.lower().startswith("clip") and archivo.lower().endswith(exts_validas):
+                encontrados.append(archivo)
+
+    print(f"Clips propios detectados ({len(encontrados)}): {encontrados}")
+    return encontrados
+
+def descargar_clips_escena_reddit(max_clips=3):
+    """Extrae videos .mp4 reales de GoldHEN, PS4 liberada y gameplay desde r/ps4homebrew y r/PS4."""
+    subreddits = [
+        "https://www.reddit.com/r/ps4homebrew/top.json?t=year&limit=30",
+        "https://www.reddit.com/r/PS4/hot.json?limit=25"
+    ]
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; WalfedwStudioBot/2.0)"}
+    urls_videos = []
+
+    for api_url in subreddits:
+        try:
+            res = requests.get(api_url, headers=headers, timeout=10)
+            if res.status_code != 200:
+                continue
+            posts = res.json().get("data", {}).get("children", [])
+            for post in posts:
+                pdata = post.get("data", {})
+                if pdata.get("over_18"):
+                    continue
+
+                media = pdata.get("secure_media") or pdata.get("media")
+                if not media and pdata.get("crosspost_parent_list"):
+                    media = pdata["crosspost_parent_list"][0].get("secure_media")
+
+                if media and isinstance(media, dict) and "reddit_video" in media:
+                    rv = media["reddit_video"]
+                    dur = rv.get("duration", 0)
+                    v_url = rv.get("fallback_url")
+                    if v_url and 3 <= dur <= 75:
+                        urls_videos.append(v_url)
+        except Exception as e:
+            print(f"Advertencia consultando clips de comunidad: {e}")
+
+    random.shuffle(urls_videos)
+    descargados = []
+
+    for idx, v_url in enumerate(urls_videos):
+        if len(descargados) >= max_clips:
+            break
+        ruta_salida = f"temp_scene_{idx}.mp4"
+        try:
+            with requests.get(v_url, headers=headers, stream=True, timeout=15) as r:
+                if r.status_code == 200:
+                    total = 0
+                    with open(ruta_salida, "wb") as f:
+                        for chunk in r.iter_content(chunk_size=1024 * 256):
+                            if chunk:
+                                f.write(chunk)
+                                total += len(chunk)
+                                if total > 15 * 1024 * 1024:
+                                    break
+                    if os.path.exists(ruta_salida) and os.path.getsize(ruta_salida) > 120000:
+                        print(f"[Clip GoldHEN/Comunidad MP4] Descargado ({len(descargados)+1}/{max_clips})")
+                        descargados.append(ruta_salida)
+        except Exception:
+            if os.path.exists(ruta_salida):
+                os.remove(ruta_salida)
+
+    return descargados
+
 def buscar_app_id(nombre_juego):
     clave = nombre_juego.lower().strip()
     if clave in STEAM_APP_IDS:
@@ -98,7 +179,7 @@ def buscar_app_id(nombre_juego):
     return None
 
 def descargar_gameplay_mp4(nombre_juego, idx):
-    """Descarga un video .mp4 real de gameplay oficial del juego."""
+    """Descarga un clip .mp4 de gameplay oficial del juego."""
     app_id = buscar_app_id(nombre_juego)
     if not app_id:
         return None
@@ -107,40 +188,31 @@ def descargar_gameplay_mp4(nombre_juego, idx):
     try:
         url_details = f"https://store.steampowered.com/api/appdetails?appids={app_id}&cc=US&l=english"
         res = requests.get(url_details, headers=headers, timeout=10)
-        if res.status_code != 200:
-            return None
-
-        data = res.json().get(str(app_id), {}).get("data", {})
-        movies = data.get("movies", [])
-        if not movies:
-            return None
-
-        # Elegir un tráiler aleatorio si el juego tiene varios
-        trailer = random.choice(movies[:3])
-        mp4_urls = trailer.get("mp4", {})
-        video_url = mp4_urls.get("480") or mp4_urls.get("max")
-        if not video_url:
-            return None
-
-        ruta_mp4 = f"temp_gameplay_{idx}.mp4"
-        with requests.get(video_url, headers=headers, stream=True, timeout=20) as r_vid:
-            if r_vid.status_code == 200:
-                bytes_descargados = 0
-                limite_bytes = 22 * 1024 * 1024  # Tope 22 MB para descarga veloz
-                with open(ruta_mp4, "wb") as f:
-                    for chunk in r_vid.iter_content(chunk_size=1024 * 256):
-                        if chunk:
-                            f.write(chunk)
-                            bytes_descargados += len(chunk)
-                            if bytes_descargados >= limite_bytes:
-                                break
-                if os.path.exists(ruta_mp4) and os.path.getsize(ruta_mp4) > 150000:
-                    print(f"[Gameplay Real MP4] Descargado: {nombre_juego}")
-                    return ruta_mp4
+        if res.status_code == 200:
+            movies = res.json().get(str(app_id), {}).get("data", {}).get("movies", [])
+            if movies:
+                trailer = random.choice(movies[:3])
+                mp4_urls = trailer.get("mp4", {})
+                video_url = mp4_urls.get("480") or mp4_urls.get("max")
+                if video_url:
+                    ruta_mp4 = f"temp_gameplay_{idx}.mp4"
+                    with requests.get(video_url, headers=headers, stream=True, timeout=18) as r_vid:
+                        if r_vid.status_code == 200:
+                            bytes_descargados = 0
+                            with open(ruta_mp4, "wb") as f:
+                                for chunk in r_vid.iter_content(chunk_size=1024 * 256):
+                                    if chunk:
+                                        f.write(chunk)
+                                        bytes_descargados += len(chunk)
+                                        if bytes_descargados >= 18 * 1024 * 1024:
+                                            break
+                            if os.path.exists(ruta_mp4) and os.path.getsize(ruta_mp4) > 150000:
+                                print(f"[Gameplay MP4] Descargado: {nombre_juego}")
+                                return ruta_mp4
     except Exception as e:
-        print(f"Advertencia descargando gameplay de {nombre_juego}: {e}")
+        print(f"Advertencia gameplay {nombre_juego}: {e}")
 
-    # Si ese juego no tuviera tráiler MP4, descargar su póster vertical HD 600x900
+    # Respaldo: póster vertical HD 600x900
     try:
         url_poster = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_600x900_2x.jpg"
         r_img = requests.get(url_poster, headers=headers, timeout=10)
@@ -151,37 +223,33 @@ def descargar_gameplay_mp4(nombre_juego, idx):
             return ruta_jpg
     except Exception:
         pass
-
     return None
 
 def obtener_recursos_visuales(juegos_solicitados):
-    """Intercala tus clips reales de GoldHEN/consola (clips/) con gameplays MP4 descargados."""
-    extensiones = ("clips/*.mp4", "clips/*.MP4", "clips/*.mov", "clips/*.MOV", "clips/*.jpg", "clips/*.png")
-    clips_taller = []
-    for ext in extensiones:
-        clips_taller.extend(glob.glob(ext))
-    random.shuffle(clips_taller)
+    """Intercala: Tus clips (clip 1, clip 2) + Clips GoldHEN/PS4 + Gameplays HD."""
+    clips_usuario = buscar_clips_locales()
+    clips_goldhen = descargar_clips_escena_reddit(max_clips=2)
 
-    gameplays_descargados = []
-    for idx, juego in enumerate(juegos_solicitados):
-        recurso = descargar_gameplay_mp4(juego, idx)
-        if recurso:
-            gameplays_descargados.append(recurso)
+    gameplays = []
+    for idx, juego in enumerate(juegos_solicitados[:3]):
+        gp = descargar_gameplay_mp4(juego, idx)
+        if gp:
+            gameplays.append(gp)
 
-    # Intercalar: [Clip GoldHEN/Consola, Gameplay 1, Clip GoldHEN/Consola, Gameplay 2...]
     mezcla = []
-    max_len = max(len(clips_taller), len(gameplays_descargados))
+    max_len = max(len(clips_usuario), len(clips_goldhen), len(gameplays), 1)
     for i in range(max_len):
-        if i < len(clips_taller):
-            mezcla.append(clips_taller[i])
-        if i < len(gameplays_descargados):
-            mezcla.append(gameplays_descargados[i])
+        if i < len(clips_usuario):
+            mezcla.append(clips_usuario[i])
+        if i < len(clips_goldhen):
+            mezcla.append(clips_goldhen[i])
+        if i < len(gameplays):
+            mezcla.append(gameplays[i])
 
-    print(f"Recursos listos: {len(clips_taller)} clips locales + {len(gameplays_descargados)} gameplays HD.")
     return mezcla
 
 def ajustar_a_vertical_hd(clip, target_w=720, target_h=1280):
-    """Escala y recorta a 720x1280 en pantalla completa sin bordes negros."""
+    """Ajusta cualquier video/foto a formato vertical 720x1280 sin franjas negras."""
     w, h = clip.size
     if (w / h) > (target_w / target_h):
         clip = clip.resize(height=target_h)
@@ -190,7 +258,7 @@ def ajustar_a_vertical_hd(clip, target_w=720, target_h=1280):
     return clip.crop(x_center=clip.w / 2, y_center=clip.h / 2, width=target_w, height=target_h)
 
 def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
-    """Arma cortes rápidos dinámicos cada ~2.0 segundos entrando directo en la acción."""
+    """Edita cortes rápidos de 1.7s a 2.1s con efecto zoom dinámico en cada cambio de plano."""
     secuencia = []
     tiempo_acumulado = 0.0
     clips_abiertos = []
@@ -207,7 +275,7 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
     while tiempo_acumulado < duracion_objetivo and errores < len(pool) * 2:
         ruta = pool[indice % len(pool)]
         indice += 1
-        dur_corte = min(random.uniform(1.8, 2.3), duracion_objetivo - tiempo_acumulado)
+        dur_corte = min(random.uniform(1.7, 2.1), duracion_objetivo - tiempo_acumulado)
         if dur_corte <= 0.15:
             break
 
@@ -215,25 +283,27 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
             if ruta.lower().endswith((".jpg", ".jpeg", ".png")):
                 base = ImageClip(ruta).set_duration(dur_corte)
                 base = ajustar_a_vertical_hd(base, 720, 1280)
-                sub = base.resize(lambda t, d=dur_corte: 1.0 + 0.05 * (t / max(0.1, d))).set_position(("center", "center"))
+                sub = base.resize(lambda t, d=dur_corte: 1.0 + 0.07 * (t / max(0.1, d))).set_position(("center", "center"))
                 clips_abiertos.append(base)
             else:
                 v = VideoFileClip(ruta).without_audio()
                 clips_abiertos.append(v)
 
-                # Si es un tráiler largo (>16s), saltar los primeros 11s para evitar logos de clasificación
-                min_start = 11.0 if v.duration > 16.0 else 0.0
-                max_start = max(min_start, v.duration - dur_corte - 0.2)
+                # Si es tráiler oficial largo, saltar intro de logos
+                min_start = 11.0 if ("temp_gameplay_" in ruta and v.duration > 16.0) else 0.0
+                max_start = max(min_start, v.duration - dur_corte - 0.15)
                 start_t = random.uniform(min_start, max_start) if max_start > min_start else min_start
 
-                sub = v.subclip(start_t, min(v.duration, start_t + dur_corte))
-                sub = ajustar_a_vertical_hd(sub, 720, 1280)
+                raw_sub = v.subclip(start_t, min(v.duration, start_t + dur_corte))
+                raw_sub = ajustar_a_vertical_hd(raw_sub, 720, 1280)
+                # Zoom dinámico sutil estilo CapCut para darle ritmo al corte
+                sub = raw_sub.resize(lambda t, d=dur_corte: 1.02 + 0.05 * (t / max(0.1, d))).set_position(("center", "center"))
 
             secuencia.append(sub)
             tiempo_acumulado += sub.duration
             errores = 0
         except Exception as e:
-            print(f"Error procesando {ruta}: {e}")
+            print(f"Error editando clip {ruta}: {e}")
             errores += 1
 
     if not secuencia:
@@ -245,7 +315,7 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
     return video_concat.subclip(0, min(duracion_objetivo, video_concat.duration)), clips_abiertos
 
 def renderizar_frame_subtitulo(palabras_grupo, indice_activo, idx_frame):
-    """Subtítulos virales estilo CapCut con caja rosa neón sobre palabra activa."""
+    """Subtítulos dinámicos estilo CapCut con caja neón saltarina."""
     ancho, alto = 720, 220
     img = Image.new("RGBA", (ancho, alto), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -327,7 +397,7 @@ def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
     return clips_subs, archivos_temp
 
 def generar_flyer_profesional_hd(salida_png="temp_flyer_pro.png"):
-    """Renderiza tarjeta HD final de WALFEDW SERVICES (PS3 • PS4 • PS5)."""
+    """Tarjeta HD de cierre para WALFEDW SERVICES (PS3 • PS4 • PS5)."""
     avatar_tag = ""
     if os.path.exists("walfedw.jpg"):
         try:
@@ -497,7 +567,7 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     audio_voz = AudioFileClip(audio_voz_path)
     duracion_voz = audio_voz.duration
 
-    print("2. Descargando clips de gameplay real (.mp4) y preparando cortes rápidos...")
+    print("2. Mezclando tus clips (clip 1, clip 2) + GoldHEN + gameplays HD...")
     lista_recursos = obtener_recursos_visuales(juegos_visuales)
     video_broll, clips_abiertos = construir_fondo_dinamico(duracion_voz, lista_recursos)
 
@@ -548,6 +618,7 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
         + archivos_subs_temp
         + glob.glob("temp_poster_*.jpg")
         + glob.glob("temp_gameplay_*.mp4")
+        + glob.glob("temp_scene_*.mp4")
     )
 
     for f in temporales:
