@@ -28,17 +28,50 @@ from moviepy.editor import (
     concatenate_audioclips
 )
 
+HISTORIAL_FILE = "historial.json"
 VOCES = ["es-MX-JorgeNeural", "es-MX-DarianNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
+def cargar_yt_usados():
+    if os.path.exists(HISTORIAL_FILE):
+        try:
+            with open(HISTORIAL_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return set(data.get("youtube_ids", []))
+        except Exception:
+            pass
+    return set()
+
+def registrar_yt_usado(video_id):
+    if not video_id:
+        return
+    data = {"temas": [], "ganchos": [], "juegos": [], "youtube_ids": []}
+    if os.path.exists(HISTORIAL_FILE):
+        try:
+            with open(HISTORIAL_FILE, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    data.update(loaded)
+        except Exception:
+            pass
+    yt_list = data.setdefault("youtube_ids", [])
+    if video_id not in yt_list:
+        yt_list.append(video_id)
+    data["youtube_ids"] = yt_list[-80:]
+    try:
+        with open(HISTORIAL_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    except Exception:
+        pass
+
 def asegurar_yt_dlp():
-    """Verifica que yt-dlp esté disponible para extraer clips de YouTube."""
     try:
         subprocess.run(["yt-dlp", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
         return True
     except Exception:
         try:
-            subprocess.run(["pip", "install", "-q", "yt-dlp"], check=True)
+            subprocess.run(["pip", "install", "-q", "-U", "yt-dlp"], check=True)
             return True
         except Exception:
             return False
@@ -115,51 +148,66 @@ def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=25, duracion
         pass
     return False
 
-def descargar_clips_youtube(juegos_solicitados, max_clips=5):
-    """Busca y recorta clips reales en YouTube (GoldHEN/PS4 showcase + gameplays sin comentarios)."""
+def descargar_clips_youtube(busquedas_youtube, juegos_solicitados, max_clips=5):
+    """Busca en YouTube según el tema exacto del guion, saltando IDs ya usados semanas anteriores."""
     if not asegurar_yt_dlp():
         return []
 
-    consultas = ["PS4 GoldHEN 60fps patch showcase"]
-    for j in juegos_solicitados[:3]:
-        consultas.append(f"{j} PS4 gameplay no commentary")
+    yt_usados = cargar_yt_usados()
+    consultas = list(busquedas_youtube or [])
+    for j in juegos_solicitados:
+        q_extra = f"{j} PS4 gameplay no commentary"
+        if q_extra not in consultas:
+            consultas.append(q_extra)
 
     clips_yt = []
     for idx, query in enumerate(consultas):
         if len(clips_yt) >= max_clips:
             break
         try:
-            # Obtener metadatos rápidos de los 3 primeros resultados
             res = subprocess.run(
-                ["yt-dlp", "--dump-single-json", "--flat-playlist", f"ytsearch3:{query}"],
-                capture_output=True, text=True, timeout=18
+                ["yt-dlp", "--dump-single-json", "--flat-playlist", f"ytsearch8:{query}"],
+                capture_output=True, text=True, timeout=20
             )
             if res.returncode != 0 or not res.stdout.strip():
                 continue
 
             entries = json.loads(res.stdout).get("entries", [])
-            random.shuffle(entries)
+            # Priorizar videos de YouTube que nunca se hayan usado antes
+            nuevos = [e for e in entries if e.get("id") and e.get("id") not in yt_usados]
+            candidatos = nuevos if nuevos else entries
+            random.shuffle(candidatos)
 
-            for entry in entries:
+            for entry in candidatos:
                 vid_id = entry.get("id")
                 dur = entry.get("duration") or 0
-                if not vid_id or (dur and (dur < 45 or dur > 1800)):
+                if not vid_id or (dur and (dur < 40 or dur > 2400)):
                     continue
 
                 vid_url = f"https://www.youtube.com/watch?v={vid_id}"
-                # Obtener stream directo con yt-dlp -g y recortar solo 8 segundos con FFmpeg
                 g_res = subprocess.run(
-                    ["yt-dlp", "-f", "best[height<=720][ext=mp4]/best[height<=720]", "-g", vid_url],
-                    capture_output=True, text=True, timeout=18
+                    [
+                        "yt-dlp",
+                        "--extractor-args", "youtube:player_client=android,web",
+                        "-f", "best[height<=720][ext=mp4]/best[height<=720]",
+                        "-g", vid_url
+                    ],
+                    capture_output=True, text=True, timeout=20
                 )
                 stream_url = g_res.stdout.strip().splitlines()[0] if g_res.stdout.strip() else ""
                 if not stream_url:
                     continue
 
                 ruta_mp4 = f"temp_yt_{idx}.mp4"
-                inicio = random.randint(25, 55)
+                if dur and dur > 60:
+                    inicio = random.randint(int(dur * 0.15), max(int(dur * 0.15) + 5, int(dur * 0.65)))
+                else:
+                    inicio = random.randint(15, 35)
+
                 if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio, duracion=8):
-                    print(f"[OK YouTube Clip] {query}")
+                    print(f"[OK YouTube Nuevo ({vid_id})] {query} @ {inicio}s")
+                    registrar_yt_usado(vid_id)
+                    yt_usados.add(vid_id)
                     clips_yt.append(ruta_mp4)
                     break
         except Exception as e:
@@ -182,7 +230,6 @@ def buscar_app_id_dinamico(nombre_juego):
     return None
 
 def descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4):
-    """Fuente paralela rápida desde Steam para asegurar siempre abundancia de clips en movimiento."""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     cookies_edad = {"birthtime": "568022401", "lastagecheckage": "1-0-1988", "mature_content": "1"}
     clips_listos = []
@@ -224,23 +271,26 @@ def descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4):
 
     return clips_listos
 
-def obtener_recursos_visuales(juegos_solicitados):
+def obtener_recursos_visuales(busquedas_youtube, juegos_solicitados):
+    """Da prioridad absoluta a clips frescos de YouTube según el tema, dejando 1 cameo de tu clip local."""
     clips_locales = buscar_clips_locales()
-    clips_yt = descargar_clips_youtube(juegos_solicitados, max_clips=4)
-    clips_steam = descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4) if len(clips_yt) < 3 else []
+    clips_yt = descargar_clips_youtube(busquedas_youtube, juegos_solicitados, max_clips=5)
+    clips_steam = descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4) if len(clips_yt) < 4 else []
 
     externos = clips_yt + clips_steam
     mezcla = []
-    if len(clips_locales) >= 1:
-        mezcla.append(clips_locales[0])
-    mezcla.extend(externos[:3])
-    if len(clips_locales) >= 2:
-        mezcla.append(clips_locales[1])
-    mezcla.extend(externos[3:])
 
-    if mezcla:
-        print(f"Clips listos: {len(clips_yt)} YouTube + {len(clips_steam)} Steam + {len(clips_locales)} Locales.")
+    if externos:
+        mezcla.extend(externos[:2])
+        if clips_locales:
+            # Solo 1 clip propio rotativo como sello de autenticidad en medio del video
+            mezcla.append(random.choice(clips_locales))
+        mezcla.extend(externos[2:])
+        print(f"Montaje listo: {len(clips_yt)} clips nuevos de YouTube + {len(clips_steam)} de Steam + cameo local.")
         return mezcla
+
+    if clips_locales:
+        return clips_locales
 
     fotos = []
     for idx, juego in enumerate(juegos_solicitados[:4]):
@@ -334,13 +384,11 @@ def construir_fondo_dinamico_con_flashes(duracion_objetivo, lista_recursos):
     return video_concat.subclip(0, min(duracion_objetivo, video_concat.duration)), flashes, clips_abiertos
 
 def crear_animacion_intro_formato(formato_dia, duracion_total):
-    """Genera una apertura visual distinta según el día (Lunes: Breaking News, Miércoles: Top 3, Viernes: Monedas)."""
     w, h = 720, 1280
     archivos_temp = []
     clips_intro = []
 
     if formato_dia == "noticiero":
-        # Lunes: Cinta animada de ÚLTIMA HORA PS4/PS3 en los primeros 3.5 segundos
         banner = Image.new("RGBA", (660, 74), (0, 0, 0, 0))
         d = ImageDraw.Draw(banner)
         d.rounded_rectangle([0, 0, 660, 74], radius=18, fill=(220, 20, 60, 245), outline=(255, 230, 0, 255), width=4)
@@ -363,7 +411,6 @@ def crear_animacion_intro_formato(formato_dia, duracion_total):
         clips_intro.append(c_news)
 
     elif formato_dia == "top3":
-        # Miércoles: Contadores #1, #2, #3 apareciendo a lo largo del video
         try:
             f_top = ImageFont.truetype("DejaVuSans-Bold.ttf", 34)
         except:
@@ -389,7 +436,6 @@ def crear_animacion_intro_formato(formato_dia, duracion_total):
                 clips_intro.append(c_p)
 
     else:
-        # Viernes: Lluvia de monedas doradas y chispas neón
         dur_coins = 2.8
         random.seed(42)
         particulas = [
@@ -785,6 +831,10 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
         "juegos_visuales",
         ["God of War Ragnarok", "Ghost of Tsushima", "Red Dead Redemption 2", "Grand Theft Auto V"]
     )
+    busquedas_youtube = datos_guion.get(
+        "busquedas_youtube",
+        ["PS4 GoldHEN menu showcase"] + [f"{j} PS4 gameplay" for j in juegos_visuales]
+    )
 
     print(f"1. Generando voz y tiempos para formato [{formato_dia.upper()}]...")
     audio_voz_path = "temp_voz_viral.mp3"
@@ -793,8 +843,8 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
 
     duracion_escena_principal = max(27.0, audio_voz.duration + 0.6)
 
-    print("2. Extrayendo clips de YouTube (GoldHEN + Gameplays) y montaje con flash...")
-    lista_recursos = obtener_recursos_visuales(juegos_visuales)
+    print("2. Buscando clips nuevos en YouTube según el guion (sin repetir IDs)...")
+    lista_recursos = obtener_recursos_visuales(busquedas_youtube, juegos_visuales)
     video_broll, clips_flash, clips_abiertos = construir_fondo_dinamico_con_flashes(duracion_escena_principal, lista_recursos)
 
     print("3. Aplicando animación de intro según el día, avatar flotante, pop-ups y subtítulos...")
