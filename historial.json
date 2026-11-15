@@ -25,10 +25,10 @@
         "¿Sigues pagando precios altísimos por cada juego nuevo en tienda?",
         "Si tienes tu PS4 o PS3 juntando polvo en tu cuarto, dale una segunda vida hoy mismo.",
         "¿Tienes una PS4 o PS3 en casa y sigues pagando carísimo por cada juego?",
-        "Mito o realidad: ¿flashear tu PS4 o PS3 malogra el lector o recalienta la consola?"
+        "Mito o realidad: ¿flashear tu PS4 o PS3 malogra el lector o recalienta la consola?",
+        "Las tres preguntas que más me hacen antes de traer su PS4 o PS3 a flashear."
     ],
     "juegos": [
-        "God of War",
         "Marvel's Spider-Man Remastered",
         "Ghost of Tsushima",
         "The Last of Us Part I",
@@ -47,13 +47,16 @@
         "Dark Souls III",
         "Red Dead Redemption 2",
         "Days Gone",
-        "Mortal Kombat 11"
+        "Mortal Kombat 11",
+        "Naruto Shippuden Ultimate Ninja Storm 4"
     ],
     "temas": [
         "Do not request games/FPKGs do not a",
         "Aventura y mundo abierto en PS4 y PS5",
         "Rescate total de consolas PS4 y PS3 guardadas",
         "Juegazos de acción y mundo abierto para PS4 y PS3",
-        "Mito vs Realidad: ¿Flashear tu PS4 o PS3 malogra la consola?"
-    ]
+        "Mito vs Realidad: ¿Flashear tu PS4 o PS3 malogra la consola?",
+        "Dudas frecuentes antes de liberar tu PS4 o PS3 este fin de semana"
+    ],
+    "youtube_ids": []
 }
