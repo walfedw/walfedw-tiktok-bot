@@ -148,8 +148,8 @@ def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=25, duracion
         pass
     return False
 
-def descargar_clips_youtube(busquedas_youtube, juegos_solicitados, max_clips=4):
-    """Extrae clips de YouTube usando clientes embebidos que evitan bloqueo en GitHub Actions."""
+def descargar_clips_youtube(busquedas_youtube, juegos_solicitados, max_clips=5):
+    """Busca en YouTube según el tema exacto del guion, saltando IDs ya usados semanas anteriores."""
     if not asegurar_yt_dlp():
         return []
 
@@ -166,99 +166,54 @@ def descargar_clips_youtube(busquedas_youtube, juegos_solicitados, max_clips=4):
             break
         try:
             res = subprocess.run(
-                [
-                    "yt-dlp",
-                    "--no-warnings",
-                    "--extractor-args", "youtube:player_client=tv_embedded,ios",
-                    "--dump-single-json",
-                    "--flat-playlist",
-                    f"ytsearch6:{query}"
-                ],
-                capture_output=True, text=True, timeout=22
+                ["yt-dlp", "--dump-single-json", "--flat-playlist", f"ytsearch8:{query}"],
+                capture_output=True, text=True, timeout=20
             )
             if res.returncode != 0 or not res.stdout.strip():
                 continue
 
             entries = json.loads(res.stdout).get("entries", [])
-            nuevos = [e for e in entries if e.get("id") and f"yt:{e.get('id')}" not in yt_usados]
+            # Priorizar videos de YouTube que nunca se hayan usado antes
+            nuevos = [e for e in entries if e.get("id") and e.get("id") not in yt_usados]
             candidatos = nuevos if nuevos else entries
             random.shuffle(candidatos)
 
             for entry in candidatos:
                 vid_id = entry.get("id")
                 dur = entry.get("duration") or 0
-                if not vid_id or (dur and (dur < 35 or dur > 2400)):
+                if not vid_id or (dur and (dur < 40 or dur > 2400)):
                     continue
 
                 vid_url = f"https://www.youtube.com/watch?v={vid_id}"
                 g_res = subprocess.run(
                     [
                         "yt-dlp",
-                        "--no-warnings",
-                        "--extractor-args", "youtube:player_client=tv_embedded,ios",
-                        "-f", "best[height<=720][ext=mp4]/best[height<=720]/best",
+                        "--extractor-args", "youtube:player_client=android,web",
+                        "-f", "best[height<=720][ext=mp4]/best[height<=720]",
                         "-g", vid_url
                     ],
-                    capture_output=True, text=True, timeout=22
+                    capture_output=True, text=True, timeout=20
                 )
                 stream_url = g_res.stdout.strip().splitlines()[0] if g_res.stdout.strip() else ""
                 if not stream_url:
                     continue
 
                 ruta_mp4 = f"temp_yt_{idx}.mp4"
-                inicio = random.randint(20, 45)
+                if dur and dur > 60:
+                    inicio = random.randint(int(dur * 0.15), max(int(dur * 0.15) + 5, int(dur * 0.65)))
+                else:
+                    inicio = random.randint(15, 35)
+
                 if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio, duracion=8):
-                    tag_id = f"yt:{vid_id}"
-                    print(f"[OK YouTube Nuevo ({tag_id})] {query}")
-                    registrar_yt_usado(tag_id)
-                    yt_usados.add(tag_id)
+                    print(f"[OK YouTube Nuevo ({vid_id})] {query} @ {inicio}s")
+                    registrar_yt_usado(vid_id)
+                    yt_usados.add(vid_id)
                     clips_yt.append(ruta_mp4)
                     break
         except Exception as e:
             print(f"Advertencia YouTube ({query}): {e}")
 
     return clips_yt
-
-def descargar_clips_comunidad_ps4(juegos_solicitados, max_clips=3):
-    """Extrae clips reales de menús GoldHEN/HEN y gameplays desde comunidades PS4/PS3 sin bloqueo."""
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; WalfedwEditorBot/3.0)"}
-    yt_usados = cargar_yt_usados()
-    busquedas = ["GoldHEN PS4 60fps", "PS4 homebrew menu"] + [f"{j} PS4" for j in juegos_solicitados[:2]]
-    clips = []
-
-    for idx, q_raw in enumerate(busquedas):
-        if len(clips) >= max_clips:
-            break
-        q = requests.utils.quote(q_raw)
-        url = f"https://www.reddit.com/search.json?q={q}&sort=top&t=year&limit=15"
-        try:
-            res = requests.get(url, headers=headers, timeout=12)
-            if res.status_code != 200:
-                continue
-            posts = res.json().get("data", {}).get("children", [])
-            random.shuffle(posts)
-            for post in posts:
-                pdata = post.get("data", {})
-                pid = pdata.get("id")
-                tag_id = f"rd:{pid}"
-                if not pid or tag_id in yt_usados or pdata.get("over_18"):
-                    continue
-                media = pdata.get("secure_media") or pdata.get("media")
-                if media and isinstance(media, dict) and "reddit_video" in media:
-                    rv = media["reddit_video"]
-                    v_url = rv.get("fallback_url")
-                    if v_url and 5 <= rv.get("duration", 0) <= 120:
-                        ruta_out = f"temp_comm_{idx}.mp4"
-                        if extraer_clip_con_ffmpeg(v_url, ruta_out, segundo_inicio=2, duracion=7):
-                            print(f"[OK Comunidad PS4/PS3 ({tag_id})] {q_raw}")
-                            registrar_yt_usado(tag_id)
-                            yt_usados.add(tag_id)
-                            clips.append(ruta_out)
-                            break
-        except Exception:
-            continue
-
-    return clips
 
 def buscar_app_id_dinamico(nombre_juego):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
@@ -317,22 +272,21 @@ def descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4):
     return clips_listos
 
 def obtener_recursos_visuales(busquedas_youtube, juegos_solicitados):
-    """Combina YouTube + Comunidad PS4/PS3 + Steam + 1 cameo de tu clip local."""
+    """Da prioridad absoluta a clips frescos de YouTube según el tema, dejando 1 cameo de tu clip local."""
     clips_locales = buscar_clips_locales()
-    clips_yt = descargar_clips_youtube(busquedas_youtube, juegos_solicitados, max_clips=3)
-    clips_comm = descargar_clips_comunidad_ps4(juegos_solicitados, max_clips=3)
-    clips_steam = descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4) if (len(clips_yt) + len(clips_comm)) < 4 else []
+    clips_yt = descargar_clips_youtube(busquedas_youtube, juegos_solicitados, max_clips=5)
+    clips_steam = descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4) if len(clips_yt) < 4 else []
 
-    externos = clips_yt + clips_comm + clips_steam
-    random.shuffle(externos)
+    externos = clips_yt + clips_steam
     mezcla = []
 
     if externos:
         mezcla.extend(externos[:2])
         if clips_locales:
+            # Solo 1 clip propio rotativo como sello de autenticidad en medio del video
             mezcla.append(random.choice(clips_locales))
-        mezcla.extend(externos[2:5])
-        print(f"Montaje listo: {len(clips_yt)} YouTube + {len(clips_comm)} Comunidad + {len(clips_steam)} Steam + cameo local.")
+        mezcla.extend(externos[2:])
+        print(f"Montaje listo: {len(clips_yt)} clips nuevos de YouTube + {len(clips_steam)} de Steam + cameo local.")
         return mezcla
 
     if clips_locales:
@@ -889,7 +843,7 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
 
     duracion_escena_principal = max(27.0, audio_voz.duration + 0.6)
 
-    print("2. Extrayendo clips nuevos de YouTube, comunidad PS4/PS3 y gameplays...")
+    print("2. Buscando clips nuevos en YouTube según el guion (sin repetir IDs)...")
     lista_recursos = obtener_recursos_visuales(busquedas_youtube, juegos_visuales)
     video_broll, clips_flash, clips_abiertos = construir_fondo_dinamico_con_flashes(duracion_escena_principal, lista_recursos)
 
@@ -963,7 +917,6 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
         + temp_stickers
         + archivos_subs_temp
         + glob.glob("temp_yt_*.mp4")
-        + glob.glob("temp_comm_*.mp4")
         + glob.glob("temp_gp_*.mp4")
         + glob.glob("temp_fallback_poster_*.jpg")
     )
