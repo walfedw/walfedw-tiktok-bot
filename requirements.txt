@@ -1,6 +1,8 @@
+requests
 feedparser
 edge-tts
 moviepy==1.0.3
-requests
-Pillow==9.5.0
+Pillow
+numpy
 playwright
+yt-dlp
