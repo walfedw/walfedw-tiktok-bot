@@ -26,40 +26,40 @@ CATALOGO_VISUAL_PS = [
 ]
 
 BANCOS_GUIONES = {
+    "novedades": [
+        {
+            "gancho": "¿Ya te enteraste de las últimas novedades para flashear tu consola?",
+            "locucion": "¿Ya te enteraste de las últimas novedades para flashear tu PlayStation? En Walfedw Services yo me encargo de flashear tu consola por software de forma 100% segura e instalarte los mejores títulos. Dime qué juegos te gustan, como God of War Ragnarok, Spider-Man 2, GTA V o Dragon Ball Sparking Zero, y te los dejo listos para jugar. Escríbeme ahora mismo, consulta la versión de tu consola y aprovecha las nuevas liberaciones.",
+            "juegos": ["God of War Ragnarok", "Marvels Spider-Man 2", "Grand Theft Auto V", "Dragon Ball Sparking Zero"],
+            "hashtags": "#FlasheoPS4 #FlasheoPS5 #GoldHEN #JuegosPS4 #Walfedw"
+        },
+        {
+            "gancho": "Salieron nuevas actualizaciones y mejoras para consolas liberadas.",
+            "locucion": "Salieron nuevas mejoras y novedades brutales para consolas liberadas. En Walfedw Services te flasheo tu PS3, PS4 o PS5 con total garantía y te instalo el catálogo que tú elijas, incluyendo parches a 60 FPS y todos los DLC. Cuéntame qué juegos te gustan, desde Ghost of Tsushima hasta Cyberpunk 2077 o Resident Evil 4. Mándame un mensaje hoy mismo, consulta la versión de tu equipo y dale vida nueva.",
+            "juegos": ["Ghost of Tsushima", "Cyberpunk 2077", "Resident Evil 4", "Red Dead Redemption 2"],
+            "hashtags": "#PS4Flasheada #FlasheoConsolas #NovedadesPS4 #PlayStationPeru #Walfedw"
+        }
+    ],
+    "consulta": [
+        {
+            "gancho": "¿Quieres flashear tu PlayStation pero no sabes si tu versión sirve?",
+            "locucion": "¿Quieres flashear tu PlayStation pero no sabes si la versión de tu sistema es compatible? Escríbeme hoy mismo y consulta tu versión sin compromiso. En Walfedw Services yo te flasheo la consola de manera limpia y segura, e instalamos tus juegos favoritos a elección como Red Dead Redemption 2, Days Gone, Grand Theft Auto V y God of War Ragnarok. Dime qué juegos te gustan y cotiza al WhatsApp.",
+            "juegos": ["Red Dead Redemption 2", "Days Gone", "Grand Theft Auto V", "God of War Ragnarok"],
+            "hashtags": "#FlasheoPS4 #PS4Liberada #ConsultaTuVersion #JuegosPS4 #Walfedw"
+        },
+        {
+            "gancho": "Dime qué juegos te gustan y te los dejo instalados en tu consola.",
+            "locucion": "Dime qué juegos te gustan y te los dejo instalados y listos para jugar en tu consola. En Walfedw Services realizamos flasheo profesional para PS3, PS4 y PS5, carga rápida de juegos, parches de rendimiento y últimas novedades del sistema. Puedes pedir títulos como Silent Hill 2, Mortal Kombat 1, Spider-Man Remastered o Elden Ring. Escríbenos al privado o WhatsApp y consulta la versión de tu consola hoy.",
+            "juegos": ["Silent Hill 2", "Mortal Kombat 1", "Marvels Spider-Man Remastered", "Elden Ring"],
+            "hashtags": "#FlasheoPS3 #FlasheoPS4 #FlasheoPS5 #WalfedwServices #Walfedw"
+        }
+    ],
     "ahorro": [
         {
-            "gancho": "¿Sigues pagando precios absurdos por cada juego nuevo?",
-            "locucion": "¿Sigues pagando precios absurdos por cada juego nuevo en tienda? Con lo que gastas en un solo disco, en Walfedw Services liberamos tu consola completa por software y sin riesgos. Desde clásicos legendarios en PS3 hasta los estrenos más pesados en PS4 y PS5, te entregamos tu equipo listo para jugar con joyas como God of War Ragnarok, Spider-Man 2, GTA V y Dragon Ball Sparking Zero. Escríbenos hoy mismo al WhatsApp o Instagram de Walfedw para cotizar.",
-            "juegos": ["God of War Ragnarok", "Marvels Spider-Man 2", "Grand Theft Auto V", "Dragon Ball Sparking Zero"],
-            "hashtags": "#FlasheoPS4 #FlasheoPS5 #JuegosPS4 #PlayStationPeru #Walfedw"
-        },
-        {
-            "gancho": "Deja de gastar una fortuna cada mes para poder jugar.",
-            "locucion": "Deja de gastar una fortuna cada mes en suscripciones y discos caros. En Walfedw Services realizamos flasheo 100% seguro para PS3, PS4 y PS5 con instalación rápida de catálogo, actualizaciones y todos los DLC incluidos. Imagina encender tu consola y tener listos títulos brutales como Ghost of Tsushima, Cyberpunk 2077, Resident Evil 4 y Red Dead Redemption 2 sin restricciones. Mándanos mensaje directo al WhatsApp de Walfedw y libera tu consola hoy.",
-            "juegos": ["Ghost of Tsushima", "Cyberpunk 2077", "Resident Evil 4", "Red Dead Redemption 2"],
-            "hashtags": "#PS4Flasheada #FlasheoConsolas #GamerPeru #PlayStation #Walfedw"
-        }
-    ],
-    "rendimiento": [
-        {
-            "gancho": "Tu PS4 esconde potencia a 60 FPS que viene bloqueada.",
-            "locucion": "Tu PS4 esconde potencia a 60 FPS que de fábrica viene completamente bloqueada. En Walfedw Services liberamos todo el potencial de tu consola mediante software seguro, activando parches de fluidez extrema, menús de mods exclusivos y acceso directo a decenas de juegos. Disfruta experiencias como Red Dead Redemption 2, Days Gone, Grand Theft Auto V y God of War Ragnarok como nunca antes. Contáctanos al WhatsApp o Instagram de Walfedw para asesoría inmediata.",
-            "juegos": ["Red Dead Redemption 2", "Days Gone", "Grand Theft Auto V", "God of War Ragnarok"],
-            "hashtags": "#PS460FPS #ModsPS4 #FlasheoPS4 #ConsolaLiberada #Walfedw"
-        },
-        {
-            "gancho": "Todo lo que puedes desbloquear cuando liberas tu PlayStation.",
-            "locucion": "Esto es todo lo que ganas cuando liberas tu PlayStation en Walfedw Services: acceso a un catálogo masivo de juegos, parches de rendimiento a 60 FPS, trucos desbloqueados y soporte técnico garantizado para PS3, PS4 y PS5. Preparamos tu sistema en tiempo récord con títulos top como Silent Hill 2, Mortal Kombat 1, Spider-Man Remastered y Elden Ring. Escríbenos al privado o al WhatsApp de Walfedw y transforma tu consola hoy mismo.",
-            "juegos": ["Silent Hill 2", "Mortal Kombat 1", "Marvels Spider-Man Remastered", "Elden Ring"],
-            "hashtags": "#PS4Flasheada #FlasheoPS5 #JuegosPS4 #WalfedwServices #Walfedw"
-        }
-    ],
-    "rescate": [
-        {
-            "gancho": "Si tienes tu PS3 o PS4 juntando polvo, mira esto.",
-            "locucion": "Si tienes tu PS3 o PS4 juntando polvo en tu cuarto porque los juegos están carísimos, dale una segunda vida hoy mismo. En Walfedw Services liberamos tu consola por software de forma limpia y segura, dejándola repleta con los mejores éxitos listos para disfrutar este fin de semana, incluyendo The Last of Us, Horizon Forbidden West, Elden Ring y Ghost of Tsushima. Escríbenos al WhatsApp de Walfedw y pide tu cotización ahora.",
+            "gancho": "Deja de gastar fortuna por cada juego cuando puedes flashear tu consola.",
+            "locucion": "Deja de gastar una fortuna por cada disco cuando puedes flashear tu consola completa en Walfedw Services. Yo me encargo de liberar tu equipo por software sin riesgos e instalarte una biblioteca brutal con los juegos que tú prefieras, como The Last of Us, Horizon Forbidden West, Elden Ring y Ghost of Tsushima. Consulta tu versión al WhatsApp, dime qué juegos te gustan y llévate tu consola lista.",
             "juegos": ["The Last of Us Part I", "Horizon Forbidden West", "Elden Ring", "Ghost of Tsushima"],
-            "hashtags": "#PS3 #PS4 #FlasheoPS4 #FlasheoPS3 #Walfedw"
+            "hashtags": "#PS4Flasheada #FlasheoPS4 #JuegosGratisPS4 #GamerPeru #Walfedw"
         }
     ]
 }
@@ -69,21 +69,21 @@ def obtener_estrategia_dia():
     dia_semana = datetime.now(peru_tz).weekday()
     if dia_semana in (0, 1):
         return {
-            "clave": "ahorro",
-            "nombre": "LUNES DE AHORRO Y CATÁLOGO MASIVO",
-            "instruccion": "Enfócate en el ahorro de dinero frente a juegos caros y suscripciones. Abre con una pregunta potente sobre lo caro que es comprar juegos."
+            "clave": "novedades",
+            "nombre": "LUNES DE NOVEDADES Y LIBERACIÓN",
+            "instruccion": "Habla sobre las últimas novedades de flasheo, instalación de juegos a pedido, y pide al cliente que consulte su versión y diga qué juegos le gustan."
         }
     elif dia_semana in (2, 3):
         return {
-            "clave": "rendimiento",
-            "nombre": "MIÉRCOLES DE 60 FPS Y MODS",
-            "instruccion": "Enfócate en parches a 60 FPS, mods, trucos y DLC desbloqueados en PS4 y PS5, además de liberación completa para PS3."
+            "clave": "consulta",
+            "nombre": "MIÉRCOLES DE CONSULTA TU VERSIÓN Y JUEGOS A ELECCIÓN",
+            "instruccion": "Invita al cliente a consultar la versión de su consola y decir qué juegos le gustan para flashearla e instalárselos."
         }
     else:
         return {
-            "clave": "rescate",
-            "nombre": "VIERNES DE RESCATE GAMER",
-            "instruccion": "Enfócate en revivir consolas guardadas sin usar para disfrutar el fin de semana con un catálogo completo instalado."
+            "clave": "ahorro",
+            "nombre": "VIERNES DE FLASHEO Y CATÁLOGO FULL",
+            "instruccion": "Destaca el servicio completo de flasheo e instalación de juegos personalizados para el fin de semana, pidiendo que consulten su versión."
         }
 
 def cargar_historial():
@@ -124,13 +124,13 @@ def generar_guion(noticias):
     estrategia = obtener_estrategia_dia()
 
     prompt = f"""
-    Eres un guionista experto en videos virales de TikTok para WALFEDW SERVICES (@walfedw23).
-    Servicios: Flasheo y liberación 100% segura por software para PS3, PS4 y PS5, instalación de catálogo de juegos, parches 60 FPS y DLC.
+    Eres el guionista principal de TikTok para WALFEDW SERVICES (@walfedw23).
+    Hablas en primera persona / servicio directo: "Yo te flasheo tu consola e instalamos los juegos que tú elijas".
 
     ENFOQUE DE HOY ({estrategia['nombre']}):
     {estrategia['instruccion']}
 
-    Tendencias de referencia:
+    Novedades recientes de referencia:
     {texto_noticias}
 
     GANCHOS YA USADOS (ESTRICTAMENTE PROHIBIDO REPETIR):
@@ -139,25 +139,25 @@ def generar_guion(noticias):
     JUEGOS USADOS RECIENTEMENTE (ELIGE OTROS):
     {juegos_recientes}
 
-    CATÁLOGO PERMITIDO (ELIGE 4 JUEGOS QUE MENCIONARÁS EN EL GUION):
+    CATÁLOGO PERMITIDO (ELIGE 4 JUEGOS QUE MENCIONARÁS):
     {", ".join(CATALOGO_VISUAL_PS)}
 
-    REGLAS ESTRICTAS DE COHERENCIA Y DURACIÓN:
-    1. EXTENSIÓN OBLIGATORIA: Escribe entre 75 y 90 palabras (para que el video dure mínimo 30 a 34 segundos hablado con calma).
-    2. COHERENCIA TÉCNICA: NUNCA digas que la PS3 corre juegos de PS4/PS5 como Cyberpunk o Elden Ring. Di "Desde clásicos en PS3 hasta los estrenos más pesados en PS4 y PS5".
-    3. NUNCA llames "la saga completa" a una mezcla de juegos diferentes; diles "juegazos como..." o "títulos top como...".
-    4. Escribe siempre "PS3, PS4 y PS5" separado por comas para que la voz lo lea pausado y claro.
-    5. NUNCA empieces con el nombre de la marca. Empieza con un gancho que atrape en 2 segundos.
-    6. PROHIBIDO mencionar Nintendo Switch y PROHIBIDO mencionar números de firmware.
-    7. Termina con una oración completa invitando a escribir al WhatsApp o Instagram de Walfedw para cotizar.
+    REGLAS OBLIGATORIAS:
+    1. EXTENSIÓN: Entre 75 y 90 palabras (para que el video dure mínimo 30 a 34 segundos).
+    2. TEMÁTICA CENTRAL: Habla de FLASHEO de consolas, INSTALACIÓN DE JUEGOS a pedido, las ÚLTIMAS NOVEDADES, y dile al espectador: "consulta tu versión" y "dime qué juegos te gustan".
+    3. COHERENCIA: Nunca digas que una PS3 corre juegos de PS4/PS5 y nunca llames "saga completa" a juegos distintos.
+    4. Escribe siempre "PS3, PS4 y PS5" separado por comas para que la voz lo pronuncie claro.
+    5. NUNCA empieces la primera frase con el nombre de la marca.
+    6. PROHIBIDO mencionar Nintendo Switch y PROHIBIDO mencionar números específicos de firmware (nada de 9.00, 11.00, 12.52).
+    7. Cierra invitando a escribir al WhatsApp o Instagram de Walfedw.
 
     DEVUELVE SOLO ESTE JSON PURO:
     {{
         "titulo_general": "Título corto",
         "gancho": "Primera frase del guion",
-        "locucion_completa": "Texto completo y coherente de 75 a 90 palabras.",
+        "locucion_completa": "Texto completo de 75 a 90 palabras.",
         "juegos_visuales": ["Juego 1", "Juego 2", "Juego 3", "Juego 4"],
-        "hashtags": "#FlasheoPS4 #PS4Flasheada #JuegosPS4 #PlayStationPeru #Walfedw"
+        "hashtags": "#FlasheoPS4 #PS4Flasheada #GoldHEN #JuegosPS4 #Walfedw"
     }}
     """
 
