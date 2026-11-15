@@ -23,7 +23,8 @@
         "Yo te flasheo tu consola e instalamos los juegos que tú elijas.",
         "¿Ya viste lo último que está pasando con",
         "¿Sigues pagando precios altísimos por cada juego nuevo en tienda?",
-        "Si tienes tu PS4 o PS3 juntando polvo en tu cuarto, dale una segunda vida hoy mismo."
+        "Si tienes tu PS4 o PS3 juntando polvo en tu cuarto, dale una segunda vida hoy mismo.",
+        "¿Tienes una PS4 o PS3 en casa y sigues pagando carísimo por cada juego?"
     ],
     "juegos": [
         "God of War",
@@ -42,11 +43,14 @@
         "Bloodborne",
         "Uncharted Legacy of Thieves",
         "Sekiro Shadows Die Twice",
-        "Dark Souls III"
+        "Dark Souls III",
+        "Red Dead Redemption 2",
+        "Days Gone"
     ],
     "temas": [
         "Do not request games/FPKGs do not a",
         "Aventura y mundo abierto en PS4 y PS5",
-        "Rescate total de consolas PS4 y PS3 guardadas"
+        "Rescate total de consolas PS4 y PS3 guardadas",
+        "Juegazos de acción y mundo abierto para PS4 y PS3"
     ]
 }
