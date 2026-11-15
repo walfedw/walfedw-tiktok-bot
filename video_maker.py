@@ -8,9 +8,9 @@ import re
 import glob
 import random
 import asyncio
+import subprocess
 import requests
 import edge_tts
-from playwright.sync_api import sync_playwright
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import (
     VideoFileClip,
@@ -76,79 +76,59 @@ async def generar_audio_con_tiempos(texto, archivo_salida):
             print(f"Advertencia con voz {voz}: {e}")
     raise RuntimeError("No se pudo generar el audio de locución.")
 
-def buscar_clips_sociales_automaticos(juegos_solicitados, max_videos=6):
-    """Busca automáticamente clips de video .mp4 reales en redes (Astro Bot, GoldHEN, PS5, juegos top)."""
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WalfedwAutoBot/3.0"}
+def buscar_clips_locales():
+    """Detecta clips reales que ya estén en .github/clips/, clips/ o la raíz."""
+    exts_validas = (".mp4", ".mov", ".mkv", ".webm")
+    excluidos = {"noticia_tiktok.mp4"}
+    encontrados = []
 
-    # Consultas dinámicas: mezcla GoldHEN/PS4/PS5 con los juegos famosos del guion (ej. Astro Bot)
-    endpoints = [
-        "https://www.reddit.com/r/ps4homebrew/top.json?t=year&limit=25",
-        "https://www.reddit.com/r/Astrobot/top.json?t=year&limit=25",
-        "https://www.reddit.com/r/PS5/top.json?t=month&limit=25"
+    for carpeta in [os.path.join(".github", "clips"), "clips"]:
+        if os.path.isdir(carpeta):
+            for archivo in sorted(os.listdir(carpeta)):
+                ruta = os.path.join(carpeta, archivo)
+                if os.path.isfile(ruta) and archivo.lower().endswith(exts_validas):
+                    encontrados.append(ruta)
+
+    for archivo in sorted(os.listdir(".")):
+        if os.path.isfile(archivo) and archivo.lower() not in excluidos:
+            if archivo.lower().startswith("clip") and archivo.lower().endswith(exts_validas):
+                encontrados.append(archivo)
+
+    return encontrados
+
+def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=12, duracion=7):
+    """Usa FFmpeg para capturar y recortar a 720x1280 vertical un tramo real de gameplay sin audio."""
+    cmd = [
+        "ffmpeg", "-y",
+        "-ss", str(segundo_inicio),
+        "-t", str(duracion),
+        "-i", url_stream,
+        "-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280",
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-crf", "24",
+        "-r", "30",
+        "-an",
+        ruta_salida
     ]
-    for juego in juegos_solicitados[:3]:
-        q = requests.utils.quote(f"{juego} gameplay")
-        endpoints.append(f"https://www.reddit.com/search.json?q={q}&sort=top&t=year&limit=15")
+    try:
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=35)
+        if os.path.exists(ruta_salida) and os.path.getsize(ruta_salida) > 80000:
+            return True
+    except Exception as e:
+        print(f"FFmpeg timeout/error con stream: {e}")
+    return False
 
-    urls_mp4 = []
-    for url in endpoints:
-        try:
-            res = requests.get(url, headers=headers, timeout=10)
-            if res.status_code != 200:
-                continue
-            posts = res.json().get("data", {}).get("children", [])
-            for p in posts:
-                pdata = p.get("data", {})
-                if pdata.get("over_18"):
-                    continue
-                media = pdata.get("secure_media") or pdata.get("media")
-                if not media and pdata.get("crosspost_parent_list"):
-                    media = pdata["crosspost_parent_list"][0].get("secure_media")
-
-                if media and isinstance(media, dict) and "reddit_video" in media:
-                    rv = media["reddit_video"]
-                    dur = rv.get("duration", 0)
-                    v_url = rv.get("fallback_url")
-                    if v_url and 3 <= dur <= 90 and v_url not in urls_mp4:
-                        urls_mp4.append(v_url)
-        except Exception as e:
-            print(f"Advertencia rastreando clips sociales: {e}")
-
-    random.shuffle(urls_mp4)
-    videos_descargados = []
-
-    for idx, v_url in enumerate(urls_mp4):
-        if len(videos_descargados) >= max_videos:
-            break
-        ruta_mp4 = f"temp_social_{idx}.mp4"
-        try:
-            with requests.get(v_url, headers=headers, stream=True, timeout=15) as r:
-                if r.status_code == 200:
-                    total = 0
-                    with open(ruta_mp4, "wb") as f:
-                        for chunk in r.iter_content(chunk_size=1024 * 256):
-                            if chunk:
-                                f.write(chunk)
-                                total += len(chunk)
-                                if total > 16 * 1024 * 1024:
-                                    break
-                    if os.path.exists(ruta_mp4) and os.path.getsize(ruta_mp4) > 120000:
-                        print(f"[Clip Social MP4] Descargado ({len(videos_descargados)+1}/{max_videos})")
-                        videos_descargados.append(ruta_mp4)
-        except Exception:
-            if os.path.exists(ruta_mp4):
-                os.remove(ruta_mp4)
-
-    return videos_descargados
-
-def descargar_trailers_gameplay_steam(juegos_solicitados, max_trailers=3):
-    """Descarga tráilers .mp4 de gameplay saltando el bloqueo de edad de Steam."""
+def descargar_gameplay_real_steam(juegos_solicitados, max_clips=4):
+    """Extrae clips de gameplay real (.mp4) desde streams de Steam (webm / hls_h264 / mp4)."""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     cookies_edad = {"birthtime": "568022401", "lastagecheckage": "1-0-1988", "mature_content": "1"}
-    trailers = []
+    clips_listos = []
 
-    for idx, juego in enumerate(juegos_solicitados):
-        if len(trailers) >= max_trailers:
+    pool_juegos = list(juegos_solicitados) + random.sample(list(STEAM_APP_IDS.keys()), 4)
+
+    for idx, juego in enumerate(pool_juegos):
+        if len(clips_listos) >= max_clips:
             break
         clave = juego.lower().strip()
         app_id = STEAM_APP_IDS.get(clave)
@@ -163,34 +143,77 @@ def descargar_trailers_gameplay_steam(juegos_solicitados, max_trailers=3):
         try:
             url_details = f"https://store.steampowered.com/api/appdetails?appids={app_id}&cc=US&l=english"
             res = requests.get(url_details, headers=headers, cookies=cookies_edad, timeout=10)
-            if res.status_code == 200:
-                movies = res.json().get(str(app_id), {}).get("data", {}).get("movies", [])
-                if movies:
-                    tr = random.choice(movies[:3])
-                    mp4_urls = tr.get("mp4", {})
-                    v_url = mp4_urls.get("480") or mp4_urls.get("max")
-                    if v_url:
-                        ruta = f"temp_gp_{idx}.mp4"
-                        with requests.get(v_url, headers=headers, stream=True, timeout=18) as rv:
-                            if rv.status_code == 200:
-                                total = 0
-                                with open(ruta, "wb") as f:
-                                    for chunk in rv.iter_content(chunk_size=1024 * 256):
-                                        if chunk:
-                                            f.write(chunk)
-                                            total += len(chunk)
-                                            if total > 18 * 1024 * 1024:
-                                                break
-                                if os.path.exists(ruta) and os.path.getsize(ruta) > 150000:
-                                    print(f"[Gameplay Trailer MP4] Descargado: {juego}")
-                                    trailers.append(ruta)
-        except Exception as e:
-            print(f"Advertencia trailer {juego}: {e}")
+            if res.status_code != 200:
+                continue
 
-    return trailers
+            movies = res.json().get(str(app_id), {}).get("data", {}).get("movies", [])
+            if not movies:
+                continue
+
+            trailer = random.choice(movies[:2])
+            # Steam en 2026 entrega webm o hls_h264 además de mp4
+            stream_url = (
+                trailer.get("mp4", {}).get("480")
+                or trailer.get("webm", {}).get("480")
+                or trailer.get("webm", {}).get("max")
+                or trailer.get("hls_h264")
+            )
+            if not stream_url:
+                continue
+
+            ruta_mp4 = f"temp_gp_{idx}.mp4"
+            inicio_aleatorio = random.randint(12, 22)
+            print(f"Extrayendo gameplay real de {juego}...")
+            if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio_aleatorio, duracion=7):
+                print(f"[OK Gameplay MP4] {juego}")
+                clips_listos.append(ruta_mp4)
+        except Exception as e:
+            print(f"Advertencia obteniendo stream de {juego}: {e}")
+
+    return clips_listos
+
+def descargar_clips_archive_org(max_clips=2):
+    """Fuente secundaria libre sin bloqueos: clips de gameplay/consolas en Internet Archive."""
+    queries = [
+        "PS4 gameplay 60fps",
+        "PlayStation 4 gameplay",
+        "PS5 gameplay"
+    ]
+    q = random.choice(queries)
+    url = (
+        f"https://archive.org/advancedsearch.php?q={requests.utils.quote(q)}+AND+mediatype:movies"
+        f"&fl[]=identifier&rows=10&page=1&output=json"
+    )
+    clips = []
+    try:
+        res = requests.get(url, timeout=10)
+        if res.status_code == 200:
+            docs = res.json().get("response", {}).get("docs", [])
+            random.shuffle(docs)
+            for idx, doc in enumerate(docs):
+                if len(clips) >= max_clips:
+                    break
+                ident = doc.get("identifier")
+                if not ident:
+                    continue
+                meta_url = f"https://archive.org/metadata/{ident}/files"
+                m_res = requests.get(meta_url, timeout=8)
+                if m_res.status_code == 200:
+                    for f in m_res.json().get("result", []):
+                        fname = f.get("name", "")
+                        if fname.lower().endswith(".mp4"):
+                            dl_url = f"https://archive.org/download/{ident}/{requests.utils.quote(fname)}"
+                            ruta_out = f"temp_arch_{idx}.mp4"
+                            if extraer_clip_con_ffmpeg(dl_url, ruta_out, segundo_inicio=15, duracion=6):
+                                print(f"[OK Archive Gameplay MP4] {ident}")
+                                clips.append(ruta_out)
+                                break
+    except Exception as e:
+        print(f"Advertencia Archive.org: {e}")
+    return clips
 
 def descargar_fotos_ultimo_recurso(juegos_solicitados):
-    """SOLO se ejecuta si falla internet y no se pudieron bajar clips de video."""
+    """SOLO si fallaran todas las descargas de video."""
     headers = {"User-Agent": "Mozilla/5.0"}
     fotos = []
     for idx, juego in enumerate(juegos_solicitados[:4]):
@@ -209,25 +232,27 @@ def descargar_fotos_ultimo_recurso(juegos_solicitados):
     return fotos
 
 def obtener_recursos_visuales(juegos_solicitados):
-    """Prioridad 100% clips de VIDEO en movimiento; fotos solo como último recurso."""
-    videos_sociales = buscar_clips_sociales_automaticos(juegos_solicitados, max_videos=5)
-    videos_gameplay = descargar_trailers_gameplay_steam(juegos_solicitados, max_trailers=3)
+    """Combina: Clips propios (.github/clips/) + Gameplays Steam FFmpeg + Archive.org."""
+    clips_locales = buscar_clips_locales()
+    clips_steam = descargar_gameplay_real_steam(juegos_solicitados, max_clips=4)
+    clips_arch = descargar_clips_archive_org(max_clips=2) if len(clips_steam) < 3 else []
 
-    # Intercalar clips sociales (Astro Bot, GoldHEN, PS5) con gameplays
-    mezcla_videos = []
-    max_len = max(len(videos_sociales), len(videos_gameplay))
+    mezcla = []
+    max_len = max(len(clips_locales), len(clips_steam), len(clips_arch))
     for i in range(max_len):
-        if i < len(videos_sociales):
-            mezcla_videos.append(videos_sociales[i])
-        if i < len(videos_gameplay):
-            mezcla_videos.append(videos_gameplay[i])
+        if i < len(clips_locales):
+            mezcla.append(clips_locales[i])
+        if i < len(clips_steam):
+            mezcla.append(clips_steam[i])
+        if i < len(clips_arch):
+            mezcla.append(clips_arch[i])
 
-    if len(mezcla_videos) >= 2:
-        print(f"Modo 100% VIDEO activo: {len(mezcla_videos)} clips en movimiento listos.")
-        return mezcla_videos
+    if mezcla:
+        print(f"Total clips de VIDEO listos: {len(mezcla)} (Locales: {len(clips_locales)}, Steam: {len(clips_steam)}, Archive: {len(clips_arch)})")
+        return mezcla
 
-    print("Pocos videos obtenidos; activando respaldo de último recurso...")
-    return mezcla_videos + descargar_fotos_ultimo_recurso(juegos_solicitados)
+    print("Usando imágenes de último recurso...")
+    return descargar_fotos_ultimo_recurso(juegos_solicitados)
 
 def ajustar_a_vertical_hd(clip, target_w=720, target_h=1280):
     w, h = clip.size
@@ -238,7 +263,7 @@ def ajustar_a_vertical_hd(clip, target_w=720, target_h=1280):
     return clip.crop(x_center=clip.w / 2, y_center=clip.h / 2, width=target_w, height=target_h)
 
 def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
-    """Corta y mutea (.without_audio()) todos los clips con ritmo rápido de 1.7s a 2.1s."""
+    """Corta y mutea todos los clips con ritmo dinámico de 1.8s a 2.2s."""
     secuencia = []
     tiempo_acumulado = 0.0
     clips_abiertos = []
@@ -255,7 +280,7 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
     while tiempo_acumulado < duracion_objetivo and errores < len(pool) * 2:
         ruta = pool[indice % len(pool)]
         indice += 1
-        dur_corte = min(random.uniform(1.7, 2.1), duracion_objetivo - tiempo_acumulado)
+        dur_corte = min(random.uniform(1.8, 2.2), duracion_objetivo - tiempo_acumulado)
         if dur_corte <= 0.15:
             break
 
@@ -266,13 +291,11 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
                 sub = base.resize(lambda t, d=dur_corte: 1.0 + 0.06 * (t / max(0.1, d))).set_position(("center", "center"))
                 clips_abiertos.append(base)
             else:
-                # MUTEO OBLIGATORIO del clip original para evitar ruido o copyright
                 v = VideoFileClip(ruta).without_audio()
                 clips_abiertos.append(v)
 
-                min_start = 10.0 if ("temp_gp_" in ruta and v.duration > 15.0) else 0.0
-                max_start = max(min_start, v.duration - dur_corte - 0.15)
-                start_t = random.uniform(min_start, max_start) if max_start > min_start else min_start
+                max_start = max(0.0, v.duration - dur_corte - 0.1)
+                start_t = random.uniform(0.0, max_start) if max_start > 0 else 0.0
 
                 raw_sub = v.subclip(start_t, min(v.duration, start_t + dur_corte))
                 raw_sub = ajustar_a_vertical_hd(raw_sub, 720, 1280)
@@ -292,6 +315,31 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
 
     video_concat = concatenate_videoclips(secuencia, method="compose")
     return video_concat.subclip(0, min(duracion_objetivo, video_concat.duration)), clips_abiertos
+
+def crear_overlay_marca_persistente(duracion):
+    """Crea la barra superior de marca (@WALFEDW) visible durante todo el video."""
+    w, h = 720, 1280
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    try:
+        f_brand = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
+        f_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 20)
+    except:
+        f_brand = f_sub = ImageFont.load_default()
+
+    # Pastilla superior con borde neón celeste
+    draw.rounded_rectangle([60, 48, 660, 122], radius=24, fill=(8, 15, 30, 215), outline=(0, 210, 255, 255), width=3)
+    draw.text((360, 74), "@WALFEDW • WALFEDW SERVICES", fill=(255, 255, 255, 255), anchor="mm", font=f_brand)
+    draw.text((360, 102), "FLASHEO Y JUEGOS • PS3 • PS4 • PS5", fill=(0, 220, 255, 255), anchor="mm", font=f_sub)
+
+    # Pastilla inferior discreta de contacto
+    draw.rounded_rectangle([110, 1140, 610, 1192], radius=18, fill=(8, 15, 30, 200), outline=(255, 225, 0, 220), width=2)
+    draw.text((360, 1166), "WHATSAPP: 914 899 697 • IG: @walfedw23", fill=(255, 230, 0, 255), anchor="mm", font=f_sub)
+
+    ruta_png = "temp_brand_overlay.png"
+    img.save(ruta_png)
+    return ImageClip(ruta_png).set_duration(duracion), ruta_png
 
 def renderizar_frame_subtitulo(palabras_grupo, indice_activo, idx_frame):
     ancho, alto = 720, 220
@@ -368,142 +416,32 @@ def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
                 ImageClip(png_path)
                 .set_start(t_ini)
                 .set_duration(dur)
-                .set_position(("center", 800))
+                .set_position(("center", 820))
             )
             clips_subs.append(clip_txt)
 
     return clips_subs, archivos_temp
 
-def generar_flyer_profesional_hd(salida_png="temp_flyer_pro.png"):
-    """Genera tarjeta comercial HD limpia para WALFEDW SERVICES (100% PlayStation, cero Switch)."""
-    html = """<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-  body {
-    width: 720px; height: 1280px;
-    background: radial-gradient(circle at 50% 22%, #0d3266 0%, #050811 75%);
-    color: #fff;
-    display: flex; flex-direction: column; justify-content: space-between;
-    padding: 58px 38px;
-  }
-  .top-badge {
-    background: rgba(0, 210, 255, 0.15);
-    border: 2px solid #00d2ff;
-    color: #00d2ff;
-    font-size: 22px; font-weight: 900; letter-spacing: 3px;
-    padding: 12px 26px; border-radius: 50px;
-    text-align: center; align-self: center;
-    box-shadow: 0 0 25px rgba(0, 210, 255, 0.45);
-  }
-  .hero { text-align: center; }
-  .ps-emblem {
-    width: 140px; height: 140px; border-radius: 50%;
-    margin: 0 auto 20px auto;
-    background: linear-gradient(135deg, #0072ff, #00d2ff);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 56px; font-weight: 900; color: #050811;
-    box-shadow: 0 0 40px rgba(0, 210, 255, 0.8);
-  }
-  .title {
-    font-size: 68px; font-weight: 900; letter-spacing: 2px;
-    line-height: 1.05;
-    text-shadow: 0 0 28px rgba(0, 210, 255, 0.85);
-  }
-  .subtitle {
-    font-size: 34px; font-weight: 900; color: #ffe600;
-    letter-spacing: 5px; margin-top: 8px;
-  }
-  .consoles-bar {
-    background: linear-gradient(90deg, #0072ff, #00d2ff, #0072ff);
-    color: #04070f;
-    font-size: 38px; font-weight: 900; letter-spacing: 5px;
-    padding: 18px; border-radius: 18px;
-    text-align: center; margin: 26px 0 0 0;
-    box-shadow: 0 0 32px rgba(0, 210, 255, 0.65);
-  }
-  .features {
-    background: rgba(15, 23, 42, 0.9);
-    border: 2px solid rgba(0, 210, 255, 0.55);
-    border-radius: 24px;
-    padding: 28px;
-    display: flex; flex-direction: column; gap: 18px;
-  }
-  .feat-item {
-    font-size: 26px; font-weight: 800; color: #f8fafc;
-    display: flex; align-items: center; gap: 14px;
-  }
-  .dot {
-    width: 16px; height: 16px; border-radius: 50%;
-    background: #ffe600; box-shadow: 0 0 12px #ffe600;
-    flex-shrink: 0;
-  }
-  .contact-box {
-    background: #ffffff; color: #050811;
-    border-radius: 24px; padding: 26px;
-    text-align: center;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.85);
-  }
-  .wa-label { font-size: 21px; font-weight: 900; color: #16a34a; letter-spacing: 1px; }
-  .wa-num { font-size: 48px; font-weight: 900; color: #050811; margin: 4px 0; }
-  .ig-handle { font-size: 26px; font-weight: 800; color: #e11d48; }
-</style>
-</head>
-<body>
-  <div class="top-badge">CALIDAD • RAPIDEZ • CONFIANZA</div>
-  <div class="hero">
-    <div class="ps-emblem">W</div>
-    <div class="title">WALFEDW</div>
-    <div class="subtitle">SERVICES</div>
-    <div class="consoles-bar">PS3 • PS4 • PS5</div>
-  </div>
-  <div class="features">
-    <div class="feat-item"><span class="dot"></span>FLASHEO 100% SEGURO POR SOFTWARE</div>
-    <div class="feat-item"><span class="dot"></span>INSTALACIÓN DE JUEGOS Y DLC</div>
-    <div class="feat-item"><span class="dot"></span>PARCHES 60 FPS Y MODS EXCLUSIVOS</div>
-    <div class="feat-item"><span class="dot"></span>GARANTÍA Y RESPALDO TÉCNICO</div>
-  </div>
-  <div class="contact-box">
-    <div class="wa-label">ESCRÍBENOS AL WHATSAPP</div>
-    <div class="wa-num">914 899 697</div>
-    <div class="ig-handle">INSTAGRAM: @walfedw23</div>
-  </div>
-</body>
-</html>"""
-
-    html_tmp = "temp_flyer_card.html"
-    with open(html_tmp, "w", encoding="utf-8") as f:
-        f.write(html)
-
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": 720, "height": 1280})
-            page.goto(f"file://{os.path.abspath(html_tmp)}")
-            page.screenshot(path=salida_png)
-            browser.close()
-        if os.path.exists(html_tmp):
-            os.remove(html_tmp)
-        return salida_png
-    except Exception as e:
-        print(f"Advertencia renderizando flyer HTML: {e}")
-        return None
-
-def obtener_clip_flyer_cierre(duracion_flyer=2.8):
-    # Si subes un flyer nuevo llamado flyer_oficial.png lo usará; si no, genera la tarjeta limpia sin Switch
-    if os.path.exists("flyer_oficial.png"):
-        clip_img = ImageClip("flyer_oficial.png").set_duration(duracion_flyer)
-        clip_img = ajustar_a_vertical_hd(clip_img, 720, 1280)
-        return clip_img.resize(lambda t: 1.04 - 0.04 * (t / duracion_flyer)).set_position(("center", "center"))
-
-    png_generado = generar_flyer_profesional_hd("temp_flyer_pro.png")
-    if png_generado and os.path.exists(png_generado):
-        clip_img = ImageClip(png_generado).set_duration(duracion_flyer)
-        return clip_img.resize(lambda t: 1.03 - 0.03 * (t / duracion_flyer)).set_position(("center", "center"))
+def obtener_clip_flyer_cierre(duracion_flyer=3.0):
+    """Usa el flyer.png / flyer.jpg que subiste en tu repositorio para cerrar el video."""
+    for candidato in ["flyer.png", "flyer.jpg", "flyer_oficial.png", "flyer_oficial.jpg"]:
+        if os.path.exists(candidato):
+            print(f"Cerrando video con tu flyer oficial: {candidato}")
+            clip_img = ImageClip(candidato).set_duration(duracion_flyer)
+            clip_img = ajustar_a_vertical_hd(clip_img, 720, 1280)
+            return clip_img.resize(lambda t: 1.04 - 0.04 * (t / duracion_flyer)).set_position(("center", "center"))
 
     img = Image.new("RGB", (720, 1280), (8, 14, 28))
+    draw = ImageDraw.Draw(img)
+    try:
+        f1 = ImageFont.truetype("DejaVuSans-Bold.ttf", 54)
+        f2 = ImageFont.truetype("DejaVuSans-Bold.ttf", 34)
+    except:
+        f1 = f2 = ImageFont.load_default()
+    draw.text((360, 520), "WALFEDW SERVICES", fill=(0, 210, 255), anchor="mm", font=f1)
+    draw.text((360, 620), "PS3 • PS4 • PS5", fill=(255, 230, 0), anchor="mm", font=f2)
+    draw.text((360, 720), "WHATSAPP: 914 899 697", fill=(255, 255, 255), anchor="mm", font=f2)
+    draw.text((360, 790), "IG: @walfedw23", fill=(255, 255, 255), anchor="mm", font=f2)
     img.save("temp_flyer_fallback.png")
     return ImageClip("temp_flyer_fallback.png").set_duration(duracion_flyer)
 
@@ -524,34 +462,37 @@ def descargar_musica_fondo():
 def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     locucion = datos_guion.get(
         "locucion_completa",
-        "Trae tu PS3, PS4 o PS5 a Walfedw Services. Liberamos tu consola de forma segura y te la entregamos repleta con joyas como Astro Bot y God of War."
+        "¿Sigues pagando precios absurdos por cada juego nuevo? Trae tu PS3, PS4 o PS5 a Walfedw Services y llévatela llena de éxitos."
     )
     juegos_visuales = datos_guion.get(
         "juegos_visuales",
-        ["Astro Bot", "God of War Ragnarok", "Marvels Spider-Man 2", "Red Dead Redemption 2"]
+        ["God of War Ragnarok", "Marvels Spider-Man 2", "Red Dead Redemption 2", "Ghost of Tsushima"]
     )
 
-    print("1. Generando voz limpia y capturando tiempos de subtítulos...")
+    print("1. Generando voz nítida y tiempos de subtítulos...")
     audio_voz_path = "temp_voz_viral.mp3"
     tiempos_palabras = asyncio.run(generar_audio_con_tiempos(locucion, audio_voz_path))
-    # Potenciar ligeramente la voz para máxima claridad sobre la música
     audio_voz = AudioFileClip(audio_voz_path).volumex(1.25)
     duracion_voz = audio_voz.duration
 
-    print("2. Rastreando clips de video en redes (Astro Bot, GoldHEN, PS5) y gameplays...")
+    print("2. Extrayendo clips de gameplay real en movimiento...")
     lista_recursos = obtener_recursos_visuales(juegos_visuales)
     video_broll, clips_abiertos = construir_fondo_dinamico(duracion_voz, lista_recursos)
 
-    print("3. Renderizando subtítulos dinámicos estilo CapCut...")
+    print("3. Añadiendo marca persistente @WALFEDW y subtítulos dinámicos...")
+    overlay_marca, ruta_marca_png = crear_overlay_marca_persistente(duracion_voz)
     clips_subs, archivos_subs_temp = crear_subtitulos_capcut(tiempos_palabras, locucion, duracion_voz)
 
-    escena_principal = CompositeVideoClip([video_broll] + clips_subs, size=(720, 1280)).set_audio(audio_voz)
+    escena_principal = CompositeVideoClip(
+        [video_broll, overlay_marca] + clips_subs,
+        size=(720, 1280)
+    ).set_audio(audio_voz)
 
-    print("4. Añadiendo flyer comercial HD de cierre (2.8s)...")
-    clip_flyer = obtener_clip_flyer_cierre(duracion_flyer=2.8)
+    print("4. Cerrando con tu flyer oficial (3.0s)...")
+    clip_flyer = obtener_clip_flyer_cierre(duracion_flyer=3.0)
     video_completo = concatenate_videoclips([escena_principal, clip_flyer], method="compose")
 
-    print("5. Mezclando música de fondo suave (9% volumen para no tapar la voz)...")
+    print("5. Mezclando música de fondo suave (9% volumen)...")
     bgm_path = descargar_musica_fondo()
     if bgm_path and os.path.exists(bgm_path):
         try:
@@ -560,7 +501,6 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
             if bgm.duration < total_dur:
                 n_loops = int(total_dur / bgm.duration) + 1
                 bgm = concatenate_videoclips([bgm] * n_loops)
-            # Volumen bajo (0.09) para que la voz se escuche súper nítida
             bgm = bgm.subclip(0, total_dur).volumex(0.09)
             audio_final = CompositeAudioClip([video_completo.audio, bgm])
             video_completo = video_completo.set_audio(audio_final)
@@ -586,10 +526,10 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
             pass
 
     temporales = (
-        [audio_voz_path, "temp_bg_black.png", "temp_flyer_fallback.png", "temp_flyer_pro.png"]
+        [audio_voz_path, "temp_bg_black.png", "temp_flyer_fallback.png", ruta_marca_png]
         + archivos_subs_temp
-        + glob.glob("temp_social_*.mp4")
         + glob.glob("temp_gp_*.mp4")
+        + glob.glob("temp_arch_*.mp4")
         + glob.glob("temp_fallback_poster_*.jpg")
     )
 
