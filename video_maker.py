@@ -4,119 +4,239 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = getattr(PIL.Image, 'LANCZOS', getattr(PIL.Image, 'BICUBIC', None))
 
 import os
-import asyncio
 import re
-import base64
+import glob
+import random
+import asyncio
 import requests
 import edge_tts
-from playwright.sync_api import sync_playwright
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, CompositeAudioClip, concatenate_videoclips
+from moviepy.editor import (
+    VideoFileClip,
+    ImageClip,
+    AudioFileClip,
+    CompositeVideoClip,
+    CompositeAudioClip,
+    concatenate_videoclips
+)
 
-VOCES = ["es-MX-DarianNeural", "es-MX-JorgeNeural", "es-ES-AlvaroNeural"]
+VOCES = ["es-MX-JorgeNeural", "es-MX-DarianNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
-# Repositorio 1: Mapa directo HD con imágenes estrictamente verificadas (0 fotos de PS5)
-IMAGENES_DIRECTAS = {
-    "the last of us part ii": "https://images.rawg.io/media/games/054/05494357022e399589d81d269fd4cb56.jpg",
-    "the last of us part 2": "https://images.rawg.io/media/games/054/05494357022e399589d81d269fd4cb56.jpg",
-    "marvel's spider-man": "https://cdn.akamai.steamstatic.com/steam/apps/1817070/header.jpg",
-    "marvels spider-man": "https://cdn.akamai.steamstatic.com/steam/apps/1817070/header.jpg",
-    "spider-man ps4": "https://cdn.akamai.steamstatic.com/steam/apps/1817070/header.jpg",
-    "god of war ragnarok": "https://cdn.akamai.steamstatic.com/steam/apps/2322010/header.jpg",
-    "god of war ragnarök": "https://cdn.akamai.steamstatic.com/steam/apps/2322010/header.jpg",
-    "ghost of tsushima": "https://cdn.akamai.steamstatic.com/steam/apps/2215430/header.jpg",
-    "red dead redemption 2": "https://cdn.akamai.steamstatic.com/steam/apps/1174180/header.jpg",
-    "grand theft auto v": "https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg",
-    "gta v": "https://cdn.akamai.steamstatic.com/steam/apps/271590/header.jpg",
-    "elden ring": "https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg",
-    "bloodborne": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1080&h=1920&fit=crop",
-    "resident evil 4 remake": "https://cdn.akamai.steamstatic.com/steam/apps/2050650/header.jpg",
-    "playstation 4 dualshock controller": "https://images.unsplash.com/photo-1507457379470-08b800bebc67?w=1080&h=1920&fit=crop",
-    "playstation 4 console": "https://images.unsplash.com/photo-1507457379470-08b800bebc67?w=1080&h=1920&fit=crop",
-    "servicio flasheo ps4": "https://images.unsplash.com/photo-1507457379470-08b800bebc67?w=1080&h=1920&fit=crop"
-}
-
-# Fotos de respaldo 100% PS4 (Mando DualShock 4 negro / ambiente gaming)
-FALLBACK_IMAGES = [
-    "https://images.unsplash.com/photo-1507457379470-08b800bebc67?w=1080&h=1920&fit=crop",
-    "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=1080&h=1920&fit=crop",
-    "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1080&h=1920&fit=crop"
+# Clips de respaldo automático en caso de que aún no subas archivos a la carpeta clips/
+CLIPS_RESPALDO_URLS = [
+    "https://assets.mixkit.co/videos/preview/mixkit-gamer-playing-video-games-in-a-dark-room-43536-large.mp4",
+    "https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-gamer-playing-with-a-controller-43541-large.mp4",
+    "https://assets.mixkit.co/videos/preview/mixkit-close-up-of-a-gamer-playing-video-games-43539-large.mp4"
 ]
 
 def limpiar_texto(texto):
-    return re.sub(r'[^\w\s.,¡!¿?@#\-áéíóúÁÉÍÓÚñÑ]', '', texto).strip()
+    return re.sub(r'[^\w\s.,¡!¿?áéíóúÁÉÍÓÚñÑ\-]', '', texto).strip()
 
-def cargar_logo_base64():
-    posibles_nombres = ["walfedw.jpg", "walfedw.png", "logo.jpg", "logo.png"]
-    for nombre in posibles_nombres:
-        if os.path.exists(nombre):
-            try:
-                with open(nombre, "rb") as f:
-                    b64 = base64.b64encode(f.read()).decode("utf-8")
-                    mime = "image/png" if nombre.endswith(".png") else "image/jpeg"
-                    return f"data:{mime};base64,{b64}"
-            except Exception as e:
-                print(f"Error al procesar logo {nombre}: {e}")
-    return ""
-
-async def generar_audio(texto, archivo_salida):
-    texto_procesar = limpiar_texto(texto)
-    if not texto_procesar:
-        texto_procesar = "Flasheo de PS4, catálogo de juegos y software en Walfedw."
-
+async def generar_audio_con_tiempos(texto, archivo_salida):
+    """Genera el MP3 de voz y captura el timestamp exacto de cada palabra."""
+    texto_limpio = limpiar_texto(texto)
     for voz in VOCES:
         try:
-            communicate = edge_tts.Communicate(texto_procesar, voz)
-            await communicate.save(archivo_salida)
-            return
+            communicate = edge_tts.Communicate(texto_limpio, voz, rate="+6%")
+            tiempos_palabras = []
+            with open(archivo_salida, "wb") as f:
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        f.write(chunk["data"])
+                    elif chunk["type"] == "WordBoundary":
+                        inicio = chunk["offset"] / 10_000_000.0
+                        dur = chunk["duration"] / 10_000_000.0
+                        tiempos_palabras.append({
+                            "palabra": chunk["text"],
+                            "inicio": inicio,
+                            "fin": inicio + dur
+                        })
+            if os.path.exists(archivo_salida) and os.path.getsize(archivo_salida) > 1000:
+                return tiempos_palabras
         except Exception as e:
             print(f"Advertencia con voz {voz}: {e}")
+    raise RuntimeError("No se pudo generar el audio de locución.")
 
-    raise RuntimeError("Error al generar el audio.")
+def obtener_clips_disponibles():
+    """Busca primero los .mp4 reales en la carpeta clips/. Si está vacía, descarga respaldo."""
+    archivos_locales = sorted(glob.glob("clips/*.mp4") + glob.glob("clips/*.MP4") + glob.glob("clips/*.mov"))
+    if archivos_locales:
+        print(f"Usando {len(archivos_locales)} clips reales encontrados en clips/.")
+        return archivos_locales
 
-def descargar_bytes_a_base64(url):
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    res = requests.get(url, headers=headers, timeout=12)
-    if res.status_code == 200 and len(res.content) > 3000:
-        b64 = base64.b64encode(res.content).decode("utf-8")
-        return f"data:image/jpeg;base64,{b64}"
-    raise ValueError("Respuesta inválida al descargar imagen.")
+    print("Carpeta clips/ vacía. Descargando clips gaming de respaldo...")
+    descargados = []
+    for idx, url in enumerate(CLIPS_RESPALDO_URLS):
+        nombre = f"temp_stock_{idx}.mp4"
+        try:
+            res = requests.get(url, timeout=20)
+            if res.status_code == 200 and len(res.content) > 50000:
+                with open(nombre, "wb") as f:
+                    f.write(res.content)
+                descargados.append(nombre)
+        except Exception as e:
+            print(f"Error descargando clip respaldo {idx}: {e}")
+    return descargados
 
-def obtener_imagen_base64(nombre_juego, idx_escena=0):
-    nombre_lower = nombre_juego.lower().strip()
+def ajustar_a_vertical(clip, target_w=720, target_h=1280):
+    """Recorta y escala cualquier video o imagen a 720x1280 sin deformar."""
+    w, h = clip.size
+    if (w / h) > (target_w / target_h):
+        clip = clip.resize(height=target_h)
+    else:
+        clip = clip.resize(width=target_w)
+    return clip.crop(x_center=clip.w / 2, y_center=clip.h / 2, width=target_w, height=target_h)
 
-    # Repositorio 1: Mapa directo verificado
-    for clave, url_directa in IMAGENES_DIRECTAS.items():
-        if clave in nombre_lower:
-            try:
-                print(f"[Mapa Directo HD] Imagen para: '{nombre_juego}'")
-                return descargar_bytes_a_base64(url_directa)
-            except Exception as e:
-                print(f"[Mapa Directo Error] {e}")
+def construir_fondo_dinamico(duracion_objetivo, lista_clips):
+    """Arma una secuencia de cortes rápidos de ~2.0 segundos cada uno."""
+    secuencia = []
+    tiempo_acumulado = 0.0
+    clips_abiertos = []
 
-    # Repositorio 2: Steam Store API CDN
+    pool = list(lista_clips)
+    random.shuffle(pool)
+    indice = 0
+
+    while tiempo_acumulado < duracion_objetivo:
+        ruta = pool[indice % len(pool)]
+        indice += 1
+        try:
+            v = VideoFileClip(ruta).without_audio()
+            clips_abiertos.append(v)
+            dur_corte = min(random.uniform(1.8, 2.4), duracion_objetivo - tiempo_acumulado)
+            if dur_corte <= 0.15:
+                break
+
+            max_start = max(0.0, v.duration - dur_corte - 0.1)
+            start_t = random.uniform(0.0, max_start) if max_start > 0 else 0.0
+            sub = v.subclip(start_t, min(v.duration, start_t + dur_corte))
+            sub = ajustar_a_vertical(sub, 720, 1280)
+            secuencia.append(sub)
+            tiempo_acumulado += sub.duration
+        except Exception as e:
+            print(f"Error procesando clip {ruta}: {e}")
+            if len(pool) == 1:
+                break
+
+    if not secuencia:
+        # Respaldo de emergencia negro si fallaran todos los videos
+        img_negra = Image.new("RGB", (720, 1280), (10, 14, 24))
+        img_negra.save("temp_bg_black.png")
+        return ImageClip("temp_bg_black.png").set_duration(duracion_objetivo), clips_abiertos
+
+    video_concat = concatenate_videoclips(secuencia, method="compose")
+    return video_concat.subclip(0, min(duracion_objetivo, video_concat.duration)), clips_abiertos
+
+def renderizar_frame_subtitulo(palabras_grupo, indice_activo, idx_frame):
+    """Dibuja subtítulos estilo CapCut: texto blanco grueso + caja rosa neón en la palabra activa."""
+    ancho, alto = 720, 220
+    img = Image.new("RGBA", (ancho, alto), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
     try:
-        url_steam = f"https://store.steampowered.com/api/storesearch/?term={requests.utils.quote(nombre_juego)}&l=english&cc=US"
-        res = requests.get(url_steam, timeout=7, headers={"User-Agent": "Mozilla/5.0"})
-        if res.status_code == 200:
-            data = res.json()
-            if data.get("items"):
-                app_id = data["items"][0]["id"]
-                url_hero = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_hero.jpg"
-                url_header = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/header.jpg"
-                for img_test in [url_hero, url_header]:
-                    try:
-                        print(f"[Steam Store CDN] Imagen para: '{nombre_juego}' (AppID {app_id})")
-                        return descargar_bytes_a_base64(img_test)
-                    except:
-                        continue
-    except Exception as e:
-        print(f"[Steam API Error] {e}")
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 46)
+    except:
+        font = ImageFont.load_default()
 
-    fallback_url = FALLBACK_IMAGES[idx_escena % len(FALLBACK_IMAGES)]
-    print(f"[Fallback PS4 HD] Fondo para escena #{idx_escena}")
-    return descargar_bytes_a_base64(fallback_url)
+    palabras_upper = [p.upper() for p in palabras_grupo]
+    espacio = 16
+    anchos = []
+    for p in palabras_upper:
+        bbox = draw.textbbox((0, 0), p, font=font)
+        anchos.append(bbox[2] - bbox[0])
+
+    ancho_total = sum(anchos) + espacio * (len(palabras_upper) - 1)
+    x_actual = (ancho - ancho_total) // 2
+    y_texto = alto // 2
+
+    for i, palabra in enumerate(palabras_upper):
+        w_pal = anchos[i]
+        if i == indice_activo:
+            # Caja de resaltado rosa/fucsia estilo CapCut
+            pad_x, pad_y = 12, 10
+            draw.rounded_rectangle(
+                [x_actual - pad_x, y_texto - 30 - pad_y, x_actual + w_pal + pad_x, y_texto + 30 + pad_y],
+                radius=14,
+                fill=(235, 30, 110, 255)
+            )
+
+        # Borde negro grueso para máxima legibilidad sobre cualquier gameplay
+        for dx, dy in [(-4,-4), (4,-4), (-4,4), (4,4), (-4,0), (4,0), (0,-4), (0,4)]:
+            draw.text((x_actual + dx, y_texto + dy), palabra, fill=(0, 0, 0, 255), anchor="lm", font=font)
+
+        draw.text((x_actual, y_texto), palabra, fill=(255, 255, 255, 255), anchor="lm", font=font)
+        x_actual += w_pal + espacio
+
+    nombre_png = f"temp_capcut_{idx_frame}.png"
+    img.save(nombre_png)
+    return nombre_png
+
+def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
+    """Sincroniza grupos de 2 a 3 palabras con caja saltarina palabra por palabra."""
+    if not tiempos_palabras:
+        palabras = limpiar_texto(texto_completo).split()
+        if not palabras:
+            return [], []
+        paso = duracion_total / len(palabras)
+        tiempos_palabras = [
+            {"palabra": p, "inicio": i * paso, "fin": (i + 1) * paso}
+            for i, p in enumerate(palabras)
+        ]
+
+    clips_subs = []
+    archivos_temp = []
+    frame_id = 0
+
+    # Agrupar de 3 en 3 palabras
+    for i in range(0, len(tiempos_palabras), 3):
+        grupo = tiempos_palabras[i:i+3]
+        textos_grupo = [g["palabra"] for g in grupo]
+
+        for j, item in enumerate(grupo):
+            t_ini = item["inicio"]
+            t_fin = grupo[j + 1]["inicio"] if (j + 1) < len(grupo) else (
+                tiempos_palabras[i + 3]["inicio"] if (i + 3) < len(tiempos_palabras) else duracion_total
+            )
+            dur = max(0.08, t_fin - t_ini)
+
+            png_path = renderizar_frame_subtitulo(textos_grupo, j, frame_id)
+            frame_id += 1
+            archivos_temp.append(png_path)
+
+            clip_txt = (
+                ImageClip(png_path)
+                .set_start(t_ini)
+                .set_duration(dur)
+                .set_position(("center", 780))
+            )
+            clips_subs.append(clip_txt)
+
+    return clips_subs, archivos_temp
+
+def obtener_clip_flyer_cierre(duracion_flyer=2.8):
+    """Carga flyer.jpg a pantalla completa con zoom suave al final del video."""
+    for candidato in ["flyer.jpg", "flyer.png", "walfedw_flyer.jpg", "walfedw.jpg"]:
+        if os.path.exists(candidato):
+            print(f"Integrando flyer final oficial: {candidato}")
+            clip_img = ImageClip(candidato).set_duration(duracion_flyer)
+            clip_img = ajustar_a_vertical(clip_img, 720, 1280)
+            return clip_img.resize(lambda t: 1.05 - 0.05 * (t / duracion_flyer)).set_position(("center", "center"))
+
+    # Respaldo si aún no se sube flyer.jpg
+    img = Image.new("RGB", (720, 1280), (12, 18, 32))
+    draw = ImageDraw.Draw(img)
+    try:
+        f_big = ImageFont.truetype("DejaVuSans-Bold.ttf", 52)
+        f_med = ImageFont.truetype("DejaVuSans-Bold.ttf", 34)
+    except:
+        f_big = f_med = ImageFont.load_default()
+    draw.text((360, 520), "WALFEDW SERVICES", fill=(0, 210, 255), anchor="mm", font=f_big)
+    draw.text((360, 620), "FLASHEO PS3 • PS4 • PS5", fill=(255, 220, 0), anchor="mm", font=f_med)
+    draw.text((360, 720), "WHATSAPP: 914 899 697", fill=(255, 255, 255), anchor="mm", font=f_med)
+    draw.text((360, 790), "IG: @walfedw23", fill=(255, 255, 255), anchor="mm", font=f_med)
+    img.save("temp_flyer_fallback.png")
+    return ImageClip("temp_flyer_fallback.png").set_duration(duracion_flyer)
 
 def descargar_musica_fondo():
     archivo_bgm = "bgm.mp3"
@@ -132,323 +252,75 @@ def descargar_musica_fondo():
         print(f"No se pudo descargar BGM: {e}")
     return None
 
-def generar_html_escena(titulo_superior, badge_text, titulo_principal, detalle, b64_img, nombre_salida_html):
-    logo_b64 = cargar_logo_base64()
-    avatar_html = f"<img src='{logo_b64}' class='brand-avatar' />" if logo_b64 else ""
-
-    html_content = f"""<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <style>
-        * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
-        body {{
-            width: 720px;
-            height: 1280px;
-            background-color: #060911;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 35px 25px;
-            position: relative;
-            overflow: hidden;
-        }}
-        .bg-image {{
-            position: absolute;
-            top: -5%; left: -5%; width: 110%; height: 110%;
-            background-image: url('{b64_img}');
-            background-size: cover;
-            background-position: center;
-            filter: blur(30px) brightness(0.30);
-            z-index: 1;
-            transform: scale(1.08);
-        }}
-        .container {{
-            position: relative;
-            z-index: 2;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            justify-content: space-between;
-        }}
-        .header {{
-            background: rgba(15, 23, 42, 0.94);
-            border: 2px solid #00d2ff;
-            border-radius: 20px;
-            padding: 14px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            box-shadow: 0 0 25px rgba(0, 210, 255, 0.6);
-            backdrop-filter: blur(12px);
-        }}
-        .brand-avatar {{
-            width: 65px;
-            height: 65px;
-            border-radius: 50%;
-            border: 2px solid #00d2ff;
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.8);
-            object-fit: cover;
-        }}
-        .header-info {{ text-align: left; }}
-        .brand {{ font-size: 34px; font-weight: 900; color: #00d2ff; letter-spacing: 2px; text-shadow: 0 0 12px #00d2ff; line-height: 1; }}
-        .sub-brand {{ font-size: 16px; color: #ffc800; font-weight: 800; margin-top: 4px; letter-spacing: 1px; }}
-
-        .main-card {{
-            background: rgba(15, 23, 42, 0.95);
-            border: 2px solid #00d2ff;
-            border-radius: 24px;
-            padding: 22px 18px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.9);
-            backdrop-filter: blur(15px);
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }}
-        .category-title {{ font-size: 22px; font-weight: 800; color: #a5f3fc; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px; }}
-        .item-number {{ display: inline-block; background: #00d2ff; color: #0b0f19; font-size: 21px; font-weight: 900; padding: 5px 16px; border-radius: 10px; margin-bottom: 12px; }}
-
-        /* CONTENEDOR VISUAL HD CENTRADO */
-        .game-banner-box {{
-            width: 100%;
-            height: 420px;
-            border-radius: 18px;
-            overflow: hidden;
-            border: 3px solid #00d2ff;
-            box-shadow: 0 0 25px rgba(0, 210, 255, 0.5);
-            background: #020617;
-            margin-bottom: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }}
-        .game-banner-img {{
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center;
-        }}
-
-        /* LETRAS GRANDES Y LEGIBLES PARA PANTALLA DE CELULAR */
-        .item-title {{ font-size: 34px; font-weight: 900; color: #ffffff; text-transform: uppercase; line-height: 1.15; text-shadow: 0 0 14px rgba(0,210,255,0.7); margin-bottom: 8px; }}
-        .item-desc {{ font-size: 22px; font-weight: 700; color: #ffe600; line-height: 1.3; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }}
-
-        .cta-box {{
-            background: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);
-            border-radius: 20px;
-            padding: 18px;
-            text-align: center;
-            color: #0b0f19;
-            box-shadow: 0 0 30px rgba(0, 210, 255, 0.7);
-        }}
-        .cta-title {{ font-size: 27px; font-weight: 900; letter-spacing: 1px; }}
-        .cta-desc {{ font-size: 19px; font-weight: 800; margin-top: 2px; opacity: 0.95; }}
-    </style>
-</head>
-<body>
-    <div class="bg-image"></div>
-    <div class="container">
-        <div class="header">
-            {avatar_html}
-            <div class="header-info">
-                <div class="brand">@WALFEDW</div>
-                <div class="sub-brand">FLASHEO • JUEGOS • SOFTWARE</div>
-            </div>
-        </div>
-        <div class="main-card">
-            <div class="category-title">{titulo_superior}</div>
-            <div class="item-number">{badge_text}</div>
-            <div class="game-banner-box">
-                <img src="{b64_img}" class="game-banner-img" />
-            </div>
-            <div class="item-title">{titulo_principal}</div>
-            <div class="item-desc">{detalle}</div>
-        </div>
-        <div class="cta-box">
-            <div class="cta-title">PS3 • PS4 • PS5</div>
-            <div class="cta-desc">Escribenos para Asesoria y Catalogo de Juegos</div>
-        </div>
-    </div>
-</body>
-</html>"""
-    
-    with open(nombre_salida_html, "w", encoding="utf-8") as f:
-        f.write(html_content)
-
-def renderizar_html_a_png(archivo_html, archivo_png):
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 720, "height": 1280})
-        ruta_absoluta = os.path.abspath(archivo_html)
-        page.goto(f"file://{ruta_absoluta}")
-        page.screenshot(path=archivo_png)
-        browser.close()
-
-def crear_clip_subtitulo_limpio(texto_frase, duracion_frase, ancho=720, alto=180):
-    img = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
-    try:
-        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 38)
-    except:
-        font = ImageFont.load_default()
-
-    words = texto_frase.split()
-    lines = []
-    current_line = []
-    for word in words:
-        current_line.append(word)
-        if len(" ".join(current_line)) > 18:
-            lines.append(" ".join(current_line[:-1]))
-            current_line = [word]
-    if current_line:
-        lines.append(" ".join(current_line))
-
-    y_offset = (alto - (len(lines) * 44)) // 2
-    for line in lines:
-        for dx, dy in [(-4,-4), (4,-4), (-4,4), (4,4), (-4,0), (4,0), (0,-4), (0,4)]:
-            draw.text((ancho // 2 + dx, y_offset + dy), line, fill=(0, 0, 0, 255), anchor="mm", font=font)
-        draw.text((ancho // 2, y_offset), line, fill=(255, 230, 0, 255), anchor="mm", font=font)
-        y_offset += 44
-
-    nombre_temp = f"sub_{abs(hash(texto_frase))}.png"
-    img.save(nombre_temp)
-    
-    clip = ImageClip(nombre_temp).set_duration(duracion_frase)
-    return clip, nombre_temp
-
-def generar_subtitulos_escena(texto_escena, duracion_escena):
-    palabras = texto_escena.split()
-    frases = []
-    chunk = []
-    
-    for p in palabras:
-        chunk.append(p)
-        if len(chunk) >= 4 or p.endswith(('.', '?', '!')):
-            frases.append(" ".join(chunk))
-            chunk = []
-    if chunk:
-        frases.append(" ".join(chunk))
-
-    if not frases:
-        return [], []
-
-    total_chars = sum(len(f) for f in frases)
-    clips_subtitulos = []
-    archivos_temp = []
-    tiempo_actual = 0.0
-
-    for frase in frases:
-        proporcion = len(frase) / total_chars
-        duracion_frase = duracion_escena * proporcion
-        
-        clip, temp_file = crear_clip_subtitulo_limpio(frase, duracion_frase)
-        clip = clip.set_start(tiempo_actual).set_position(("center", 920))
-        
-        clips_subtitulos.append(clip)
-        archivos_temp.append(temp_file)
-        tiempo_actual += duracion_frase
-
-    return clips_subtitulos, archivos_temp
-
-def procesar_escena_individual(idx, sup_title, badge, main_title, detail, locucion, query_img, archivos_temp):
-    audio_file = f"voz_{idx}.mp3"
-    asyncio.run(generar_audio(locucion, audio_file))
-    audio_clip = AudioFileClip(audio_file)
-    duracion = audio_clip.duration
-
-    b64_img = obtener_imagen_base64(query_img, idx)
-
-    html_file = f"escena_{idx}.html"
-    png_file = f"escena_{idx}.png"
-    generar_html_escena(sup_title, badge, main_title, detail, b64_img, html_file)
-    renderizar_html_a_png(html_file, png_file)
-
-    clip_base = ImageClip(png_file).set_duration(duracion)
-    clip_anim = clip_base.resize(lambda t: 1 + 0.03 * (t / duracion)).set_position(('center', 'center'))
-
-    subs_escena, temp_subs = generar_subtitulos_escena(locucion, duracion)
-    video_escena = CompositeVideoClip([clip_anim] + subs_escena, size=(720, 1280)).set_audio(audio_clip)
-
-    archivos_temp.extend([audio_file, html_file, png_file] + temp_subs)
-    return video_escena
-
 def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
-    titulo_general = datos_guion.get("titulo_general", "FLASHEO Y JUEGOS PS4")
-    gancho_loc = datos_guion.get("gancho_locucion", "¿Tienes tu PS4 sin flashear? En Walfedw la liberamos hoy.")
-    gancho_tit = datos_guion.get("gancho_titulo", "¿TIENES TU PS4 SIN FLASHEAR?")
-    escenas = datos_guion.get("escenas", [])
-    cierre_loc = datos_guion.get("cierre_locucion", "¿Qué esperas para liberar tu PS4? Escríbenos al privado.")
-    cierre_tit = datos_guion.get("cierre_titulo", "¡FLASHEA TU PS4 HOY!")
-
-    clips_completos = []
-    archivos_temporales = []
-
-    print("1. Renderizando Gancho Inicial...")
-    clip_gancho = procesar_escena_individual(
-        0, titulo_general, "⚡ ATENCIÓN GAMERS PS4 ⚡", gancho_tit, 
-        "Flasheo profesional y carga de catálogo completo", gancho_loc, "playstation 4 dualshock controller", archivos_temporales
+    locucion = datos_guion.get(
+        "locucion_completa",
+        "Esa PS4 ahí sentada puede hacer mucho más de lo que crees. Flashéala en Walfedw para obtener miles de juegos sin costos elevados. Contáctanos hoy mismo."
     )
-    clips_completos.append(clip_gancho)
 
-    print(f"2. Renderizando {len(escenas)} escenas principales...")
-    for idx, esc in enumerate(escenas, 1):
-        item_nom = esc.get("item", f"Opción #{idx}")
-        item_det = esc.get("detalle", "")
-        item_loc = esc.get("locucion", "")
-        item_q = esc.get("busqueda_imagen", item_nom)
+    print("1. Generando voz con sincronización palabra por palabra...")
+    audio_voz_path = "temp_voz_viral.mp3"
+    tiempos_palabras = asyncio.run(generar_audio_con_tiempos(locucion, audio_voz_path))
+    audio_voz = AudioFileClip(audio_voz_path)
+    duracion_voz = audio_voz.duration
 
-        clip_item = procesar_escena_individual(
-            idx, titulo_general, f"OPCIÓN #{idx}", item_nom, 
-            item_det, item_loc, item_q, archivos_temporales
-        )
-        clips_completos.append(clip_item)
+    print("2. Preparando cortes rápidos con clips de video...")
+    lista_clips = obtener_clips_disponibles()
+    video_broll, clips_abiertos = construir_fondo_dinamico(duracion_voz, lista_clips)
 
-    print("3. Renderizando Escena Final de Cierre (CTA)...")
-    clip_cierre = procesar_escena_individual(
-        99, titulo_general, "💬 ESCRÍBENOS AL PRIVADO", cierre_tit, 
-        "Cotiza tu flasheo y catálogo de juegos", cierre_loc, "playstation 4 dualshock controller", archivos_temporales
-    )
-    clips_completos.append(clip_cierre)
+    print("3. Renderizando subtítulos dinámicos estilo CapCut...")
+    clips_subs, archivos_subs_temp = crear_subtitulos_capcut(tiempos_palabras, locucion, duracion_voz)
 
-    print("4. Concatenando video base...")
-    video_final = concatenate_videoclips(clips_completos)
+    escena_principal = CompositeVideoClip([video_broll] + clips_subs, size=(720, 1280)).set_audio(audio_voz)
 
-    print("5. Mezclando Música de Fondo (BGM)...")
+    print("4. Añadiendo flyer comercial de cierre (2.8s)...")
+    clip_flyer = obtener_clip_flyer_cierre(duracion_flyer=2.8)
+    video_completo = concatenate_videoclips([escena_principal, clip_flyer], method="compose")
+
+    print("5. Mezclando beat gaming de fondo...")
     bgm_path = descargar_musica_fondo()
     if bgm_path and os.path.exists(bgm_path):
         try:
-            bgm_clip = AudioFileClip(bgm_path)
-            total_dur = video_final.duration
-            if bgm_clip.duration < total_dur:
-                n_loops = int(total_dur / bgm_clip.duration) + 1
-                bgm_clip = concatenate_videoclips([bgm_clip] * n_loops)
-            bgm_clip = bgm_clip.subclip(0, total_dur).volumex(0.14)
-            audio_mezclado = CompositeAudioClip([video_final.audio, bgm_clip])
-            video_final = video_final.set_audio(audio_mezclado)
+            bgm = AudioFileClip(bgm_path)
+            total_dur = video_completo.duration
+            if bgm.duration < total_dur:
+                n_loops = int(total_dur / bgm.duration) + 1
+                bgm = concatenate_videoclips([bgm] * n_loops)
+            bgm = bgm.subclip(0, total_dur).volumex(0.16)
+            audio_final = CompositeAudioClip([video_completo.audio, bgm])
+            video_completo = video_completo.set_audio(audio_final)
         except Exception as e:
-            print(f"Advertencia al mezclar BGM: {e}")
+            print(f"Advertencia BGM: {e}")
 
-    print("6. Renderizando MP4...")
-    video_final.write_videofile(
+    print("6. Exportando MP4 final...")
+    video_completo.write_videofile(
         archivo_salida,
-        fps=24,
+        fps=30,
         codec="libx264",
         audio_codec="aac",
         temp_audiofile="temp-audio.m4a",
         remove_temp=True
     )
 
-    video_final.close()
+    video_completo.close()
+    audio_voz.close()
+    for c in clips_abiertos:
+        try:
+            c.close()
+        except:
+            pass
 
-    for f in archivos_temporales:
+    # Limpieza de archivos temporales
+    for f in [audio_voz_path, "temp_bg_black.png", "temp_flyer_fallback.png"] + archivos_subs_temp:
         if os.path.exists(f):
             try:
                 os.remove(f)
             except:
                 pass
+    for stock in glob.glob("temp_stock_*.mp4"):
+        try:
+            os.remove(stock)
+        except:
+            pass
 
     return archivo_salida
