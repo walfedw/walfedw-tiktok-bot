@@ -21,7 +21,8 @@
         "¡Este viernes invierte tu consola en una segunda vida brillante!",
         "¿Con tu consola estancada sigue soñando con acción pura?",
         "Yo te flasheo tu consola e instalamos los juegos que tú elijas.",
-        "¿Ya viste lo último que está pasando con"
+        "¿Ya viste lo último que está pasando con",
+        "¿Sigues pagando precios altísimos por cada juego nuevo en tienda?"
     ],
     "juegos": [
         "God of War",
@@ -37,9 +38,11 @@
         "Black Myth Wukong",
         "Tekken 8",
         "Gran Turismo 7",
-        "Bloodborne"
+        "Bloodborne",
+        "Uncharted Legacy of Thieves"
     ],
     "temas": [
-        "Do not request games/FPKGs do not a"
+        "Do not request games/FPKGs do not a",
+        "Aventura y mundo abierto en PS4 y PS5"
     ]
 }
