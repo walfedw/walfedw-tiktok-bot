@@ -77,7 +77,7 @@ def buscar_clips_locales():
     return encontrados
 
 def buscar_app_id_dinamico(nombre_juego):
-    """Consulta la API de búsqueda de Steam en vivo para encontrar CUALQUIER juego que elija la IA."""
+    """Consulta la API de búsqueda de Steam en vivo para encontrar cualquier juego del guion."""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     limpio = re.sub(r'[^\w\s\-:]', '', nombre_juego).strip()
     try:
@@ -115,7 +115,7 @@ def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=24, duracion
     return False
 
 def descargar_gameplay_dinamico(juegos_solicitados, max_clips=6):
-    """Busca y descarga gameplays reales para los juegos exactos elegidos por la IA."""
+    """Busca y descarga gameplays reales para los juegos PS4/PS3 elegidos por la IA."""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     cookies_edad = {"birthtime": "568022401", "lastagecheckage": "1-0-1988", "mature_content": "1"}
     clips_listos = []
@@ -137,7 +137,6 @@ def descargar_gameplay_dinamico(juegos_solicitados, max_clips=6):
             if not movies:
                 continue
 
-            # Extraer hasta 2 cortes distintos si el juego tiene varios tráilers
             trailers_elegidos = movies[:2] if len(juegos_solicitados) <= 3 else [movies[1] if len(movies) > 1 else movies[0]]
             for t_idx, trailer in enumerate(trailers_elegidos):
                 if len(clips_listos) >= max_clips:
@@ -163,14 +162,14 @@ def descargar_gameplay_dinamico(juegos_solicitados, max_clips=6):
     return clips_listos
 
 def descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3):
-    """Busca clips de gameplay en comunidades de PS5/PS4 para exclusivos de consola (ej. Astro Bot, Gran Turismo 7)."""
+    """Busca clips de gameplay en comunidades de PS4/PS3 para exclusivos de consola (ej. Bloodborne)."""
     headers = {"User-Agent": "Mozilla/5.0 (compatible; WalfedwDynamicFinder/2.0)"}
     clips = []
 
     for idx, juego in enumerate(juegos_solicitados):
         if len(clips) >= max_clips:
             break
-        q = requests.utils.quote(f"{juego} gameplay")
+        q = requests.utils.quote(f"{juego} PS4 gameplay")
         url = f"https://www.reddit.com/search.json?q={q}&sort=top&t=year&limit=12"
         try:
             res = requests.get(url, headers=headers, timeout=10)
@@ -187,7 +186,7 @@ def descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3):
                     if v_url and 4 <= rv.get("duration", 0) <= 90:
                         ruta_out = f"temp_comm_{idx}.mp4"
                         if extraer_clip_con_ffmpeg(v_url, ruta_out, segundo_inicio=2, duracion=7):
-                            print(f"[OK Clip Comunidad] {juego}")
+                            print(f"[OK Clip Comunidad PS4] {juego}")
                             clips.append(ruta_out)
                             break
         except Exception:
@@ -196,7 +195,7 @@ def descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3):
     return clips
 
 def obtener_recursos_visuales(juegos_solicitados):
-    """Combina gameplays dinámicos de los juegos del guion + clips de comunidad + tus clips locales."""
+    """Combina gameplays dinámicos de PS4/PS3 con tus clips de GoldHEN/consola."""
     clips_locales = buscar_clips_locales()
     clips_steam = descargar_gameplay_dinamico(juegos_solicitados, max_clips=5)
     clips_comm = descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3) if len(clips_steam) < 4 else []
@@ -211,10 +210,9 @@ def obtener_recursos_visuales(juegos_solicitados):
     mezcla.extend(gameplays[3:])
 
     if mezcla:
-        print(f"Recursos dinámicos listos: {len(gameplays)} gameplays reales + {len(clips_locales)} clips locales.")
+        print(f"Recursos dinámicos listos: {len(gameplays)} gameplays + {len(clips_locales)} clips consola.")
         return mezcla
 
-    # Último recurso: pósteres verticales dinámicos de los juegos elegidos
     fotos = []
     for idx, juego in enumerate(juegos_solicitados[:4]):
         app_id = buscar_app_id_dinamico(juego)
@@ -296,7 +294,7 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
     return video_concat.subclip(0, min(duracion_objetivo, video_concat.duration)), clips_abiertos
 
 def crear_overlay_marca_persistente(duracion):
-    """Barra superior e inferior de WALFEDW SERVICES visible durante todo el video."""
+    """Barra superior e inferior dando prioridad a PS4 y PS3 (y soporte PS5)."""
     w, h = 720, 1280
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -309,7 +307,7 @@ def crear_overlay_marca_persistente(duracion):
 
     draw.rounded_rectangle([60, 48, 660, 122], radius=24, fill=(8, 15, 30, 215), outline=(0, 210, 255, 255), width=3)
     draw.text((360, 74), "@WALFEDW • WALFEDW SERVICES", fill=(255, 255, 255, 255), anchor="mm", font=f_brand)
-    draw.text((360, 102), "FLASHEO Y JUEGOS • PS3 • PS4 • PS5", fill=(0, 220, 255, 255), anchor="mm", font=f_sub)
+    draw.text((360, 102), "FLASHEO PS4 Y PS3 • TAMBIÉN PS5", fill=(0, 220, 255, 255), anchor="mm", font=f_sub)
 
     draw.rounded_rectangle([90, 1140, 630, 1192], radius=18, fill=(8, 15, 30, 205), outline=(255, 225, 0, 220), width=2)
     draw.text((360, 1166), "CONSULTA TU VERSIÓN • WA: 914 899 697", fill=(255, 230, 0, 255), anchor="mm", font=f_sub)
@@ -406,7 +404,7 @@ def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
     return clips_subs, archivos_temp
 
 def obtener_clip_flyer_cierre(duracion_flyer=4.0):
-    """Encuadra tu flyer.png de GitHub completo sin recortarlo dentro de la tarjeta vertical HD."""
+    """Encuadra tu flyer.png de GitHub completo destacando PS4 y PS3 como especialidad."""
     canvas_w, canvas_h = 720, 1280
     lienzo = Image.new("RGB", (canvas_w, canvas_h), (8, 12, 26))
     draw = ImageDraw.Draw(lienzo)
@@ -419,7 +417,7 @@ def obtener_clip_flyer_cierre(duracion_flyer=4.0):
 
     try:
         f_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 52)
-        f_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
+        f_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 26)
         f_cta = ImageFont.truetype("DejaVuSans-Bold.ttf", 25)
         f_wa = ImageFont.truetype("DejaVuSans-Bold.ttf", 44)
         f_ig = ImageFont.truetype("DejaVuSans-Bold.ttf", 26)
@@ -465,7 +463,7 @@ def obtener_clip_flyer_cierre(duracion_flyer=4.0):
     draw.rounded_rectangle([45, y_fin_imagen, 675, y_fin_imagen + 135], radius=22, fill=(15, 25, 48), outline=(255, 230, 0), width=3)
     draw.text((360, y_fin_imagen + 36), "• CONSULTA LA VERSIÓN DE TU CONSOLA", fill=(255, 230, 0), anchor="mm", font=f_cta)
     draw.text((360, y_fin_imagen + 76), "• DIME QUÉ JUEGOS TE GUSTAN", fill=(255, 255, 255), anchor="mm", font=f_cta)
-    draw.text((360, y_fin_imagen + 112), "PS3 • PS4 • PS5 • 100% SEGURO", fill=(0, 220, 255), anchor="mm", font=f_sub)
+    draw.text((360, y_fin_imagen + 112), "ESPECIALISTAS EN PS4 Y PS3 • TAMBIÉN PS5", fill=(0, 220, 255), anchor="mm", font=f_sub)
 
     y_contacto = y_fin_imagen + 160
     draw.rounded_rectangle([45, y_contacto, 675, y_contacto + 175], radius=24, fill=(255, 255, 255))
@@ -496,11 +494,11 @@ def descargar_musica_fondo():
 def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     locucion = datos_guion.get(
         "locucion_completa",
-        "¿Ya te enteraste de las últimas novedades en PlayStation? En Walfedw Services yo me encargo de flashear tu consola e instalarte los mejores títulos. Consulta tu versión y dime qué juegos te gustan."
+        "¿Tienes una PS4 o PS3 en casa y sigues pagando carísimo por cada juego? En Walfedw Services yo me encargo de flashear tu consola e instalarte los mejores títulos. Consulta tu versión y dime qué juegos te gustan."
     )
     juegos_visuales = datos_guion.get(
         "juegos_visuales",
-        ["Black Myth Wukong", "Tekken 8", "Gran Turismo 7", "Bloodborne"]
+        ["God of War Ragnarok", "Ghost of Tsushima", "Red Dead Redemption 2", "Grand Theft Auto V"]
     )
 
     print("1. Generando locución completa y tiempos de subtítulos...")
@@ -510,11 +508,11 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
 
     duracion_escena_principal = max(27.0, audio_voz.duration + 0.6)
 
-    print("2. Buscando y extrayendo gameplays dinámicos para:", juegos_visuales)
+    print("2. Buscando y extrayendo gameplays de PS4/PS3 para:", juegos_visuales)
     lista_recursos = obtener_recursos_visuales(juegos_visuales)
     video_broll, clips_abiertos = construir_fondo_dinamico(duracion_escena_principal, lista_recursos)
 
-    print("3. Añadiendo marca @WALFEDW y subtítulos autoajustados...")
+    print("3. Añadiendo marca @WALFEDW (PS4 y PS3) y subtítulos autoajustados...")
     overlay_marca, ruta_marca_png = crear_overlay_marca_persistente(duracion_escena_principal)
     clips_subs, archivos_subs_temp = crear_subtitulos_capcut(tiempos_palabras, locucion, audio_voz.duration)
 
