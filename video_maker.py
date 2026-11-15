@@ -5,6 +5,7 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 
 import os
 import re
+import json
 import glob
 import math
 import random
@@ -30,11 +31,22 @@ from moviepy.editor import (
 VOCES = ["es-MX-JorgeNeural", "es-MX-DarianNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
+def asegurar_yt_dlp():
+    """Verifica que yt-dlp esté disponible para extraer clips de YouTube."""
+    try:
+        subprocess.run(["yt-dlp", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        return True
+    except Exception:
+        try:
+            subprocess.run(["pip", "install", "-q", "yt-dlp"], check=True)
+            return True
+        except Exception:
+            return False
+
 def limpiar_texto(texto):
     return re.sub(r'[^\w\s.,¡!¿?áéíóúÁÉÍÓÚñÑ\-]', '', texto).strip()
 
 async def generar_audio_con_tiempos(texto, archivo_salida):
-    """Genera locución con energía y captura el timestamp exacto de cada palabra."""
     texto_limpio = limpiar_texto(texto)
     voces_rotadas = list(VOCES)
     random.shuffle(voces_rotadas)
@@ -63,7 +75,6 @@ async def generar_audio_con_tiempos(texto, archivo_salida):
     raise RuntimeError("No se pudo generar el audio de locución.")
 
 def buscar_clips_locales():
-    """Detecta clips propios en .github/clips/, clips/ o la raíz."""
     exts_validas = (".mp4", ".mov", ".mkv", ".webm")
     excluidos = {"noticia_tiktok.mp4"}
     encontrados = []
@@ -82,21 +93,7 @@ def buscar_clips_locales():
 
     return encontrados
 
-def buscar_app_id_dinamico(nombre_juego):
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    limpio = re.sub(r'[^\w\s\-:]', '', nombre_juego).strip()
-    try:
-        url = f"https://store.steampowered.com/api/storesearch/?term={requests.utils.quote(limpio)}&l=english&cc=US"
-        res = requests.get(url, headers=headers, timeout=10)
-        if res.status_code == 200:
-            items = res.json().get("items", [])
-            if items:
-                return str(items[0]["id"])
-    except Exception:
-        pass
-    return None
-
-def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=24, duracion=8):
+def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=25, duracion=8):
     cmd = [
         "ffmpeg", "-y",
         "-ss", str(segundo_inicio),
@@ -111,14 +108,81 @@ def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=24, duracion
         ruta_salida
     ]
     try:
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=40)
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=45)
         if os.path.exists(ruta_salida) and os.path.getsize(ruta_salida) > 100000:
             return True
     except Exception:
         pass
     return False
 
-def descargar_gameplay_dinamico(juegos_solicitados, max_clips=6):
+def descargar_clips_youtube(juegos_solicitados, max_clips=5):
+    """Busca y recorta clips reales en YouTube (GoldHEN/PS4 showcase + gameplays sin comentarios)."""
+    if not asegurar_yt_dlp():
+        return []
+
+    consultas = ["PS4 GoldHEN 60fps patch showcase"]
+    for j in juegos_solicitados[:3]:
+        consultas.append(f"{j} PS4 gameplay no commentary")
+
+    clips_yt = []
+    for idx, query in enumerate(consultas):
+        if len(clips_yt) >= max_clips:
+            break
+        try:
+            # Obtener metadatos rápidos de los 3 primeros resultados
+            res = subprocess.run(
+                ["yt-dlp", "--dump-single-json", "--flat-playlist", f"ytsearch3:{query}"],
+                capture_output=True, text=True, timeout=18
+            )
+            if res.returncode != 0 or not res.stdout.strip():
+                continue
+
+            entries = json.loads(res.stdout).get("entries", [])
+            random.shuffle(entries)
+
+            for entry in entries:
+                vid_id = entry.get("id")
+                dur = entry.get("duration") or 0
+                if not vid_id or (dur and (dur < 45 or dur > 1800)):
+                    continue
+
+                vid_url = f"https://www.youtube.com/watch?v={vid_id}"
+                # Obtener stream directo con yt-dlp -g y recortar solo 8 segundos con FFmpeg
+                g_res = subprocess.run(
+                    ["yt-dlp", "-f", "best[height<=720][ext=mp4]/best[height<=720]", "-g", vid_url],
+                    capture_output=True, text=True, timeout=18
+                )
+                stream_url = g_res.stdout.strip().splitlines()[0] if g_res.stdout.strip() else ""
+                if not stream_url:
+                    continue
+
+                ruta_mp4 = f"temp_yt_{idx}.mp4"
+                inicio = random.randint(25, 55)
+                if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio, duracion=8):
+                    print(f"[OK YouTube Clip] {query}")
+                    clips_yt.append(ruta_mp4)
+                    break
+        except Exception as e:
+            print(f"Advertencia YouTube ({query}): {e}")
+
+    return clips_yt
+
+def buscar_app_id_dinamico(nombre_juego):
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    limpio = re.sub(r'[^\w\s\-:]', '', nombre_juego).strip()
+    try:
+        url = f"https://store.steampowered.com/api/storesearch/?term={requests.utils.quote(limpio)}&l=english&cc=US"
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code == 200:
+            items = res.json().get("items", [])
+            if items:
+                return str(items[0]["id"])
+    except Exception:
+        pass
+    return None
+
+def descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4):
+    """Fuente paralela rápida desde Steam para asegurar siempre abundancia de clips en movimiento."""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     cookies_edad = {"birthtime": "568022401", "lastagecheckage": "1-0-1988", "mature_content": "1"}
     clips_listos = []
@@ -140,75 +204,42 @@ def descargar_gameplay_dinamico(juegos_solicitados, max_clips=6):
             if not movies:
                 continue
 
-            trailers_elegidos = movies[:2] if len(juegos_solicitados) <= 3 else [movies[1] if len(movies) > 1 else movies[0]]
-            for t_idx, trailer in enumerate(trailers_elegidos):
-                if len(clips_listos) >= max_clips:
-                    break
-                stream_url = (
-                    trailer.get("mp4", {}).get("480")
-                    or trailer.get("webm", {}).get("480")
-                    or trailer.get("webm", {}).get("max")
-                    or trailer.get("hls_h264")
-                )
-                if not stream_url:
-                    continue
+            trailer = movies[1] if len(movies) > 1 else movies[0]
+            stream_url = (
+                trailer.get("mp4", {}).get("480")
+                or trailer.get("webm", {}).get("480")
+                or trailer.get("webm", {}).get("max")
+                or trailer.get("hls_h264")
+            )
+            if not stream_url:
+                continue
 
-                ruta_mp4 = f"temp_gp_{idx}_{t_idx}.mp4"
-                inicio_accion = random.randint(20, 40)
-                if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio_accion, duracion=8):
-                    print(f"[OK Gameplay Dinámico] {juego}")
-                    clips_listos.append(ruta_mp4)
+            ruta_mp4 = f"temp_gp_{idx}.mp4"
+            inicio_accion = random.randint(20, 40)
+            if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio_accion, duracion=8):
+                print(f"[OK Steam Gameplay] {juego}")
+                clips_listos.append(ruta_mp4)
         except Exception:
             pass
 
     return clips_listos
 
-def descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3):
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; WalfedwDynamicFinder/2.0)"}
-    clips = []
-
-    for idx, juego in enumerate(juegos_solicitados):
-        if len(clips) >= max_clips:
-            break
-        q = requests.utils.quote(f"{juego} PS4 gameplay")
-        url = f"https://www.reddit.com/search.json?q={q}&sort=top&t=year&limit=12"
-        try:
-            res = requests.get(url, headers=headers, timeout=10)
-            if res.status_code != 200:
-                continue
-            for post in res.json().get("data", {}).get("children", []):
-                pdata = post.get("data", {})
-                if pdata.get("over_18"):
-                    continue
-                media = pdata.get("secure_media") or pdata.get("media")
-                if media and isinstance(media, dict) and "reddit_video" in media:
-                    rv = media["reddit_video"]
-                    v_url = rv.get("fallback_url")
-                    if v_url and 4 <= rv.get("duration", 0) <= 90:
-                        ruta_out = f"temp_comm_{idx}.mp4"
-                        if extraer_clip_con_ffmpeg(v_url, ruta_out, segundo_inicio=2, duracion=7):
-                            clips.append(ruta_out)
-                            break
-        except Exception:
-            continue
-
-    return clips
-
 def obtener_recursos_visuales(juegos_solicitados):
     clips_locales = buscar_clips_locales()
-    clips_steam = descargar_gameplay_dinamico(juegos_solicitados, max_clips=5)
-    clips_comm = descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3) if len(clips_steam) < 4 else []
+    clips_yt = descargar_clips_youtube(juegos_solicitados, max_clips=4)
+    clips_steam = descargar_gameplay_steam_respaldo(juegos_solicitados, max_clips=4) if len(clips_yt) < 3 else []
 
-    gameplays = clips_steam + clips_comm
+    externos = clips_yt + clips_steam
     mezcla = []
     if len(clips_locales) >= 1:
         mezcla.append(clips_locales[0])
-    mezcla.extend(gameplays[:3])
+    mezcla.extend(externos[:3])
     if len(clips_locales) >= 2:
         mezcla.append(clips_locales[1])
-    mezcla.extend(gameplays[3:])
+    mezcla.extend(externos[3:])
 
     if mezcla:
+        print(f"Clips listos: {len(clips_yt)} YouTube + {len(clips_steam)} Steam + {len(clips_locales)} Locales.")
         return mezcla
 
     fotos = []
@@ -236,7 +267,6 @@ def ajustar_a_vertical_hd(clip, target_w=720, target_h=1280):
     return clip.crop(x_center=clip.w / 2, y_center=clip.h / 2, width=target_w, height=target_h)
 
 def construir_fondo_dinamico_con_flashes(duracion_objetivo, lista_recursos):
-    """Arma el montaje con cortes rápidos (1.9s-2.3s), zoom punch y destellos flash en cada cambio."""
     secuencia = []
     flashes = []
     tiempo_acumulado = 0.0
@@ -303,74 +333,119 @@ def construir_fondo_dinamico_con_flashes(duracion_objetivo, lista_recursos):
     video_concat = concatenate_videoclips(secuencia, method="compose")
     return video_concat.subclip(0, min(duracion_objetivo, video_concat.duration)), flashes, clips_abiertos
 
-def crear_lluvia_monedas_y_destellos(duracion=2.8):
-    """Animación viral de lluvia de monedas doradas y chispas neón en los primeros segundos."""
+def crear_animacion_intro_formato(formato_dia, duracion_total):
+    """Genera una apertura visual distinta según el día (Lunes: Breaking News, Miércoles: Top 3, Viernes: Monedas)."""
     w, h = 720, 1280
-    random.seed(42)
-    particulas = []
-    for _ in range(26):
-        particulas.append({
-            "x": random.uniform(30, w - 30),
-            "y0": random.uniform(-450, 200),
-            "vy": random.uniform(480, 820),
-            "vx": random.uniform(-60, 60),
-            "radio": random.randint(18, 34),
-            "fase": random.uniform(0, 6.28),
-            "vel_giro": random.uniform(6, 14),
-            "es_moneda": random.random() > 0.35
-        })
+    archivos_temp = []
+    clips_intro = []
 
-    cache = {"t_key": -1, "rgb": None, "mask": None}
+    if formato_dia == "noticiero":
+        # Lunes: Cinta animada de ÚLTIMA HORA PS4/PS3 en los primeros 3.5 segundos
+        banner = Image.new("RGBA", (660, 74), (0, 0, 0, 0))
+        d = ImageDraw.Draw(banner)
+        d.rounded_rectangle([0, 0, 660, 74], radius=18, fill=(220, 20, 60, 245), outline=(255, 230, 0, 255), width=4)
+        try:
+            f_news = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
+        except:
+            f_news = ImageFont.load_default()
+        d.text((330, 37), "ÚLTIMA HORA • NOVEDADES PS4 / PS3", fill=(255, 255, 255, 255), anchor="mm", font=f_news)
 
-    def render_t(t):
-        t_key = int(t * 24)
-        if cache["t_key"] == t_key:
+        ruta_b = "temp_intro_news.png"
+        banner.save(ruta_b)
+        archivos_temp.append(ruta_b)
+
+        c_news = (
+            ImageClip(ruta_b)
+            .set_duration(3.5)
+            .resize(lambda t: 1.0 + 0.04 * math.sin(t * 10))
+            .set_position(("center", 335))
+        )
+        clips_intro.append(c_news)
+
+    elif formato_dia == "top3":
+        # Miércoles: Contadores #1, #2, #3 apareciendo a lo largo del video
+        try:
+            f_top = ImageFont.truetype("DejaVuSans-Bold.ttf", 34)
+        except:
+            f_top = ImageFont.load_default()
+
+        puntos = [(1.5, "TOP #1"), (8.5, "TOP #2"), (15.5, "TOP #3")]
+        for idx, (t_ini, texto) in enumerate(puntos):
+            if t_ini + 4.0 < duracion_total:
+                pill = Image.new("RGBA", (220, 66), (0, 0, 0, 0))
+                d = ImageDraw.Draw(pill)
+                d.rounded_rectangle([0, 0, 220, 66], radius=20, fill=(130, 25, 230, 240), outline=(255, 225, 0, 255), width=3)
+                d.text((110, 33), texto, fill=(255, 230, 0, 255), anchor="mm", font=f_top)
+                r_p = f"temp_top_{idx}.png"
+                pill.save(r_p)
+                archivos_temp.append(r_p)
+
+                c_p = (
+                    ImageClip(r_p)
+                    .set_start(t_ini)
+                    .set_duration(4.0)
+                    .set_position((465, 155))
+                )
+                clips_intro.append(c_p)
+
+    else:
+        # Viernes: Lluvia de monedas doradas y chispas neón
+        dur_coins = 2.8
+        random.seed(42)
+        particulas = [
+            {
+                "x": random.uniform(30, w - 30),
+                "y0": random.uniform(-450, 200),
+                "vy": random.uniform(480, 820),
+                "vx": random.uniform(-60, 60),
+                "radio": random.randint(18, 34),
+                "fase": random.uniform(0, 6.28),
+                "vel_giro": random.uniform(6, 14),
+                "es_moneda": random.random() > 0.35
+            }
+            for _ in range(26)
+        ]
+        cache = {"t_key": -1, "rgb": None, "mask": None}
+
+        def render_t(t):
+            t_key = int(t * 24)
+            if cache["t_key"] == t_key:
+                return cache["rgb"], cache["mask"]
+
+            img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+            alpha_global = int(255 * min(1.0, max(0.0, (dur_coins - t) / 0.5)))
+
+            for p in particulas:
+                cx = p["x"] + p["vx"] * t + 18 * math.sin(t * 4 + p["fase"])
+                cy = p["y0"] + p["vy"] * t
+                if cy < -50 or cy > h + 50:
+                    continue
+                r = p["radio"]
+                if p["es_moneda"]:
+                    escala_x = max(0.22, abs(math.cos(t * p["vel_giro"] + p["fase"])))
+                    rx = int(r * escala_x)
+                    draw.ellipse([cx - rx, cy - r, cx + rx, cy + r], fill=(255, 210, 0, alpha_global), outline=(255, 250, 180, alpha_global), width=3)
+                else:
+                    s = int(r * 0.85)
+                    draw.polygon(
+                        [(cx, cy - s), (cx + s // 3, cy - s // 3), (cx + s, cy),
+                         (cx + s // 3, cy + s // 3), (cx, cy + s), (cx - s // 3, cy + s // 3),
+                         (cx - s, cy), (cx - s // 3, cy - s // 3)],
+                        fill=(120, 245, 255, alpha_global)
+                    )
+
+            arr = np.array(img)
+            cache["t_key"] = t_key
+            cache["rgb"] = arr[:, :, :3]
+            cache["mask"] = arr[:, :, 3].astype(np.float64) / 255.0
             return cache["rgb"], cache["mask"]
 
-        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-        alpha_global = int(255 * min(1.0, max(0.0, (duracion - t) / 0.5)))
+        clip_rgb = VideoClip(lambda t: render_t(t)[0], duration=dur_coins)
+        clip_mask = VideoClip(lambda t: render_t(t)[1], duration=dur_coins, ismask=True)
+        clips_intro.append(clip_rgb.set_mask(clip_mask).set_duration(dur_coins))
 
-        for p in particulas:
-            cx = p["x"] + p["vx"] * t + 18 * math.sin(t * 4 + p["fase"])
-            cy = p["y0"] + p["vy"] * t
-            if cy < -50 or cy > h + 50:
-                continue
-
-            r = p["radio"]
-            if p["es_moneda"]:
-                escala_x = max(0.22, abs(math.cos(t * p["vel_giro"] + p["fase"])))
-                rx = int(r * escala_x)
-                draw.ellipse(
-                    [cx - rx, cy - r, cx + rx, cy + r],
-                    fill=(255, 210, 0, alpha_global),
-                    outline=(255, 250, 180, alpha_global),
-                    width=3
-                )
-                if rx > 8:
-                    draw.ellipse(
-                        [cx - rx // 2, cy - r // 2, cx + rx // 2, cy + r // 2],
-                        outline=(210, 140, 0, alpha_global),
-                        width=2
-                    )
-            else:
-                s = int(r * 0.85)
-                draw.polygon(
-                    [(cx, cy - s), (cx + s // 3, cy - s // 3), (cx + s, cy),
-                     (cx + s // 3, cy + s // 3), (cx, cy + s), (cx - s // 3, cy + s // 3),
-                     (cx - s, cy), (cx - s // 3, cy - s // 3)],
-                    fill=(120, 245, 255, alpha_global)
-                )
-
-        arr = np.array(img)
-        cache["t_key"] = t_key
-        cache["rgb"] = arr[:, :, :3]
-        cache["mask"] = arr[:, :, 3].astype(np.float64) / 255.0
-        return cache["rgb"], cache["mask"]
-
-    clip_rgb = VideoClip(lambda t: render_t(t)[0], duration=duracion)
-    clip_mask = VideoClip(lambda t: render_t(t)[1], duration=duracion, ismask=True)
-    return clip_rgb.set_mask(clip_mask).set_duration(duracion)
+    return clips_intro, archivos_temp
 
 def encontrar_foto_creador():
     for nombre in ["walfedw.jpg", "walfedw.png", "flyer.png", "flyer.jpg"]:
@@ -379,7 +454,6 @@ def encontrar_foto_creador():
     return None
 
 def crear_stickers_animados_creador(duracion_total):
-    """Crea tu avatar flotante arriba a la izquierda + tus apariciones pop-up con rebote."""
     ruta_foto = encontrar_foto_creador()
     if not ruta_foto:
         return [], []
@@ -411,7 +485,7 @@ def crear_stickers_animados_creador(duracion_total):
             f_tag = ImageFont.truetype("DejaVuSans-Bold.ttf", 17)
         except:
             f_tag = ImageFont.load_default()
-        b_draw.text(((tam_avatar + 16) // 2, tam_avatar + 7), "EN VIVO • PS4", fill=(255, 255, 255, 255), anchor="mm", font=f_tag)
+        b_draw.text(((tam_avatar + 16) // 2, tam_avatar + 7), "WALFEDW • PS4", fill=(255, 255, 255, 255), anchor="mm", font=f_tag)
 
         ruta_badge = "temp_avatar_badge.png"
         badge.save(ruta_badge)
@@ -438,13 +512,12 @@ def crear_stickers_animados_creador(duracion_total):
         pop_card.save(ruta_pop)
         archivos_temp.append(ruta_pop)
 
-        momentos_pop = [2.5, 16.5]
-        for t_inicio in momentos_pop:
-            if t_inicio + 3.0 < duracion_total:
+        for t_inicio in [3.8, 17.5]:
+            if t_inicio + 2.8 < duracion_total:
                 c_pop = (
                     ImageClip(ruta_pop)
                     .set_start(t_inicio)
-                    .set_duration(3.0)
+                    .set_duration(2.8)
                     .resize(lambda t: max(0.3, 1.0 - 0.35 * math.exp(-8 * t) * math.cos(16 * t)))
                     .set_position(("center", 545))
                 )
@@ -476,20 +549,20 @@ def crear_emoji_reaccion_animado(duracion_total):
     )
     return clip_emoji, ruta_emoji
 
-def crear_overlay_marca_persistente(duracion):
+def crear_overlay_marca_persistente(duracion, etiqueta_formato="FLASHEO PS4 Y PS3 • TAMBIÉN PS5"):
     w, h = 720, 1280
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
     try:
         f_brand = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
-        f_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 20)
+        f_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 19)
     except:
         f_brand = f_sub = ImageFont.load_default()
 
-    draw.rounded_rectangle([60, 48, 660, 122], radius=24, fill=(8, 15, 30, 215), outline=(0, 210, 255, 255), width=3)
+    draw.rounded_rectangle([55, 48, 665, 122], radius=24, fill=(8, 15, 30, 220), outline=(0, 210, 255, 255), width=3)
     draw.text((360, 74), "@WALFEDW • WALFEDW SERVICES", fill=(255, 255, 255, 255), anchor="mm", font=f_brand)
-    draw.text((360, 102), "FLASHEO PS4 Y PS3 • TAMBIÉN PS5", fill=(0, 220, 255, 255), anchor="mm", font=f_sub)
+    draw.text((360, 102), etiqueta_formato, fill=(0, 220, 255, 255), anchor="mm", font=f_sub)
 
     draw.rounded_rectangle([90, 1140, 630, 1192], radius=18, fill=(8, 15, 30, 215), outline=(255, 225, 0, 235), width=2)
     draw.text((360, 1166), "CONSULTA TU VERSIÓN • WA: 914 899 697", fill=(255, 230, 0, 255), anchor="mm", font=f_sub)
@@ -586,7 +659,6 @@ def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
     return clips_subs, archivos_temp
 
 def generar_sfx_animaciones(duracion_total):
-    """Genera efectos de sonido estilo CapCut con duración explícita fijada."""
     sr = 44100
     n_samples = int(duracion_total * sr)
     audio = np.zeros((n_samples, 2), dtype=np.float64)
@@ -602,7 +674,7 @@ def generar_sfx_animaciones(duracion_total):
             audio[i0:i0 + dur_n, 0] += onda
             audio[i0:i0 + dur_n, 1] += onda
 
-    for t_pop in [2.5, 16.5]:
+    for t_pop in [3.8, 17.5]:
         i0 = int(t_pop * sr)
         dur_p = int(0.14 * sr)
         if i0 + dur_p < n_samples:
@@ -703,37 +775,40 @@ def descargar_musica_fondo():
     return None
 
 def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
+    formato_dia = datos_guion.get("formato_dia", "noticiero")
+    etiqueta_formato = datos_guion.get("etiqueta_formato", "FLASHEO PS4 Y PS3 • TAMBIÉN PS5")
     locucion = datos_guion.get(
         "locucion_completa",
-        "¿Tienes una PS4 o PS3 en casa y sigues pagando carísimo por cada juego? En Walfedw Services yo me encargo de flashear tu consola e instalarte los mejores títulos. Consulta tu versión y dime qué juegos te gustan."
+        "¿Tienes una PS4 o PS3 en casa y sigues pagando carísimo por cada juego? En Walfedw Services yo me encargo de flashear tu consola e instalarte los mejores títulos."
     )
     juegos_visuales = datos_guion.get(
         "juegos_visuales",
         ["God of War Ragnarok", "Ghost of Tsushima", "Red Dead Redemption 2", "Grand Theft Auto V"]
     )
 
-    print("1. Generando voz con energía y timestamps...")
+    print(f"1. Generando voz y tiempos para formato [{formato_dia.upper()}]...")
     audio_voz_path = "temp_voz_viral.mp3"
     tiempos_palabras = asyncio.run(generar_audio_con_tiempos(locucion, audio_voz_path))
     audio_voz = AudioFileClip(audio_voz_path).volumex(1.25)
 
     duracion_escena_principal = max(27.0, audio_voz.duration + 0.6)
 
-    print("2. Montando gameplays con zoom punch y transiciones flash...")
+    print("2. Extrayendo clips de YouTube (GoldHEN + Gameplays) y montaje con flash...")
     lista_recursos = obtener_recursos_visuales(juegos_visuales)
     video_broll, clips_flash, clips_abiertos = construir_fondo_dinamico_con_flashes(duracion_escena_principal, lista_recursos)
 
-    print("3. Agregando lluvia de monedas, tu avatar flotante, pop-ups y subtítulos...")
-    lluvia_monedas = crear_lluvia_monedas_y_destellos(duracion=2.8)
+    print("3. Aplicando animación de intro según el día, avatar flotante, pop-ups y subtítulos...")
+    clips_intro, temp_intro = crear_animacion_intro_formato(formato_dia, duracion_escena_principal)
     stickers_creador, temp_stickers = crear_stickers_animados_creador(duracion_escena_principal)
     emoji_animado, temp_emoji = crear_emoji_reaccion_animado(duracion_escena_principal)
-    overlay_marca, ruta_marca_png = crear_overlay_marca_persistente(duracion_escena_principal)
+    overlay_marca, ruta_marca_png = crear_overlay_marca_persistente(duracion_escena_principal, etiqueta_formato)
     clips_subs, archivos_subs_temp = crear_subtitulos_capcut(tiempos_palabras, locucion, audio_voz.duration)
 
     capas_escena = (
         [video_broll]
         + clips_flash
-        + [lluvia_monedas, overlay_marca]
+        + clips_intro
+        + [overlay_marca]
         + stickers_creador
         + [emoji_animado]
         + clips_subs
@@ -788,10 +863,11 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
 
     temporales = (
         [audio_voz_path, "temp_bg_black.png", "temp_flyer_github_card.png", ruta_marca_png, temp_emoji]
+        + temp_intro
         + temp_stickers
         + archivos_subs_temp
+        + glob.glob("temp_yt_*.mp4")
         + glob.glob("temp_gp_*.mp4")
-        + glob.glob("temp_comm_*.mp4")
         + glob.glob("temp_fallback_poster_*.jpg")
     )
 
