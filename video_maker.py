@@ -80,19 +80,20 @@ async def generar_audio_con_tiempos(texto, archivo_salida):
     raise RuntimeError("No se pudo generar el audio de locución.")
 
 def buscar_clips_locales():
-    """Detecta 'clip 1', 'clip 2', etc. tanto en clips/ como en la raíz del repositorio."""
+    """Detecta 'clip 1', 'clip 2', etc. en clips/, .github/clips/ o en la raíz."""
     exts_validas = (".mp4", ".mov", ".mkv", ".webm", ".jpg", ".jpeg", ".png")
     excluidos = {"noticia_tiktok.mp4", "walfedw.jpg", "walfedw.png", "flyer.jpg", "flyer.png"}
     encontrados = []
 
-    # 1. Buscar todo dentro de la carpeta clips/
-    if os.path.isdir("clips"):
-        for archivo in sorted(os.listdir("clips")):
-            ruta = os.path.join("clips", archivo)
-            if os.path.isfile(ruta) and archivo.lower().endswith(exts_validas):
-                encontrados.append(ruta)
+    # 1. Buscar dentro de clips/ y .github/clips/
+    for carpeta in ["clips", os.path.join(".github", "clips")]:
+        if os.path.isdir(carpeta):
+            for archivo in sorted(os.listdir(carpeta)):
+                ruta = os.path.join(carpeta, archivo)
+                if os.path.isfile(ruta) and archivo.lower().endswith(exts_validas):
+                    encontrados.append(ruta)
 
-    # 2. Buscar en la carpeta principal archivos que empiecen con 'clip' (ej: 'clip 1.mp4', 'clip2.mp4')
+    # 2. Buscar en la carpeta principal archivos que empiecen con 'clip'
     for archivo in sorted(os.listdir(".")):
         if os.path.isfile(archivo) and archivo.lower() not in excluidos:
             if archivo.lower().startswith("clip") and archivo.lower().endswith(exts_validas):
