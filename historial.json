@@ -18,11 +18,10 @@
         "¿Sabías que tu PS4 puede revivir en menos de una hora?",
         "¿Tu PS4 está tirada y sin vida?",
         "¡Este viernes, el valor de tu PS3/PS4/PS5 vuelve a brillar!",
-        "¡Este viernes invierte tu consola en una segunda vida brillante!"
+        "¡Este viernes invierte tu consola en una segunda vida brillante!",
+        "¿Con tu consola estancada sigue soñando con acción pura?"
     ],
     "juegos": [
-        "God of War Ragnarok",
-        "Red Dead Redemption 2",
         "Cyberpunk 2077",
         "Elden Ring",
         "God of War",
@@ -30,6 +29,8 @@
         "Ghost of Tsushima",
         "The Last of Us Part I",
         "Resident Evil 4",
-        "Grand Theft Auto V"
+        "Grand Theft Auto V",
+        "Marvels Spider-Man Remastered",
+        "Horizon Forbidden West"
     ]
 }
