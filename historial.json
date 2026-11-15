@@ -1,17 +1,26 @@
-[
-    "Juego Real 1",
-    "Juego Real 2",
-    "Juego Real 3",
-    "Servicio Flasheo PS4",
-    "Juego 1",
-    "Juego 2",
-    "Juego 3",
-    "Spider-Man: Miles Morales",
-    "Ghost of Tsushima",
-    "Bloodborne",
-    "The Last of Us Part II",
-    "God of War Ragnarök",
-    "Marvel's Spider-Man",
-    "Red Dead Redemption 2",
-    "¡Esa PS4 ahí sentada puede hacer mucho más de lo que crees!"
-]
+{
+    "ganchos": [
+        "Juego Real 1",
+        "Juego Real 2",
+        "Juego Real 3",
+        "Servicio Flasheo PS4",
+        "Juego 1",
+        "Juego 2",
+        "Juego 3",
+        "Spider-Man: Miles Morales",
+        "Ghost of Tsushima",
+        "Bloodborne",
+        "The Last of Us Part II",
+        "God of War Ragnarök",
+        "Marvel's Spider-Man",
+        "Red Dead Redemption 2",
+        "¡Esa PS4 ahí sentada puede hacer mucho más de lo que crees!",
+        "¿Sabías que tu PS4 puede revivir en menos de una hora?"
+    ],
+    "juegos": [
+        "God of War Ragnarok",
+        "Red Dead Redemption 2",
+        "Cyberpunk 2077",
+        "Elden Ring"
+    ]
+}
