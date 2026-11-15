@@ -13,7 +13,7 @@ import subprocess
 import requests
 import numpy as np
 import edge_tts
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont
 from moviepy.audio.AudioClip import AudioArrayClip
 from moviepy.editor import (
     VideoFileClip,
@@ -23,7 +23,8 @@ from moviepy.editor import (
     AudioFileClip,
     CompositeVideoClip,
     CompositeAudioClip,
-    concatenate_videoclips
+    concatenate_videoclips,
+    concatenate_audioclips
 )
 
 VOCES = ["es-MX-JorgeNeural", "es-MX-DarianNeural", "es-ES-AlvaroNeural"]
@@ -274,12 +275,10 @@ def construir_fondo_dinamico_con_flashes(duracion_objetivo, lista_recursos):
 
                 raw_sub = v.subclip(start_t, min(v.duration, start_t + dur_corte))
                 raw_sub = ajustar_a_vertical_hd(raw_sub, 720, 1280)
-                # Zoom punch inicial al entrar cada clip
                 sub = raw_sub.resize(
                     lambda t, d=dur_corte: (1.08 - 0.06 * min(1.0, t / 0.25)) + 0.03 * (t / max(0.1, d))
                 ).set_position(("center", "center"))
 
-            # Añadir destello flash neón de 0.12s al cambiar de escena
             if tiempo_acumulado > 0.2:
                 flash = (
                     ColorClip(size=(720, 1280), color=(210, 245, 255))
@@ -340,7 +339,6 @@ def crear_lluvia_monedas_y_destellos(duracion=2.8):
 
             r = p["radio"]
             if p["es_moneda"]:
-                # Efecto giro 3D de moneda dorada
                 escala_x = max(0.22, abs(math.cos(t * p["vel_giro"] + p["fase"])))
                 rx = int(r * escala_x)
                 draw.ellipse(
@@ -356,7 +354,6 @@ def crear_lluvia_monedas_y_destellos(duracion=2.8):
                         width=2
                     )
             else:
-                # Destello estrella neón cian/dorado
                 s = int(r * 0.85)
                 draw.polygon(
                     [(cx, cy - s), (cx + s // 3, cy - s // 3), (cx + s, cy),
@@ -373,10 +370,9 @@ def crear_lluvia_monedas_y_destellos(duracion=2.8):
 
     clip_rgb = VideoClip(lambda t: render_t(t)[0], duration=duracion)
     clip_mask = VideoClip(lambda t: render_t(t)[1], duration=duracion, ismask=True)
-    return clip_rgb.set_mask(clip_mask)
+    return clip_rgb.set_mask(clip_mask).set_duration(duracion)
 
 def encontrar_foto_creador():
-    """Busca walfedw.jpg o flyer.png en el repositorio para usar tu imagen real en los stickers."""
     for nombre in ["walfedw.jpg", "walfedw.png", "flyer.png", "flyer.jpg"]:
         if os.path.exists(nombre):
             return nombre
@@ -393,14 +389,12 @@ def crear_stickers_animados_creador(duracion_total):
 
     try:
         foto_orig = Image.open(ruta_foto).convert("RGB")
-        # Recorte cuadrado centrado en ti (rostro y mando)
         w, h = foto_orig.size
         lado = min(w, h)
         left = (w - lado) // 2
         top = max(0, int((h - lado) * 0.25))
         cuadro = foto_orig.crop((left, top, left + lado, top + lado))
 
-        # 1. Avatar tipo Streamer en esquina superior izquierda (como en tu video PES 2027)
         tam_avatar = 148
         resample = getattr(Image, "Resampling", Image).LANCZOS
         avatar_img = cuadro.resize((tam_avatar, tam_avatar), resample)
@@ -410,7 +404,6 @@ def crear_stickers_animados_creador(duracion_total):
 
         badge = Image.new("RGBA", (tam_avatar + 16, tam_avatar + 36), (0, 0, 0, 0))
         b_draw = ImageDraw.Draw(badge)
-        # Aro neón brillante
         b_draw.ellipse([2, 2, tam_avatar + 14, tam_avatar + 14], fill=(0, 220, 255, 255))
         badge.paste(avatar_img, (8, 8), mask_circ)
         b_draw.rounded_rectangle([14, tam_avatar - 8, tam_avatar + 2, tam_avatar + 22], radius=10, fill=(235, 30, 110, 255))
@@ -431,7 +424,6 @@ def crear_stickers_animados_creador(duracion_total):
         )
         clips_stickers.append(clip_avatar)
 
-        # 2. Sticker Pop-Up más grande que aparece con rebote (como en tu video GoldHEN 13.52)
         tam_pop = 230
         pop_img = cuadro.resize((tam_pop, tam_pop), resample)
         mask_pop = Image.new("L", (tam_pop, tam_pop), 0)
@@ -464,18 +456,14 @@ def crear_stickers_animados_creador(duracion_total):
     return clips_stickers, archivos_temp
 
 def crear_emoji_reaccion_animado(duracion_total):
-    """Dibuja un badge/emoji gamer animado rebotando abajo a la derecha (estilo tus videos virales)."""
     size = 86
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Cara gamer amarilla brillante con lentes oscuros estilo pixel/cool
     draw.ellipse([4, 4, size - 4, size - 4], fill=(255, 215, 0, 255), outline=(255, 255, 255, 255), width=3)
-    # Lentes negros cool
     draw.rounded_rectangle([14, 26, 41, 43], radius=5, fill=(15, 20, 35, 255))
     draw.rounded_rectangle([45, 26, 72, 43], radius=5, fill=(15, 20, 35, 255))
     draw.line([(39, 31), (47, 31)], fill=(15, 20, 35, 255), width=4)
-    # Sonrisa gamer
     draw.arc([24, 38, 62, 68], start=15, end=165, fill=(15, 20, 35, 255), width=5)
 
     ruta_emoji = "temp_emoji_cool.png"
@@ -598,12 +586,11 @@ def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
     return clips_subs, archivos_temp
 
 def generar_sfx_animaciones(duracion_total):
-    """Genera efectos de sonido estilo CapCut (campana de monedas al inicio + pop en stickers)."""
+    """Genera efectos de sonido estilo CapCut con duración explícita fijada."""
     sr = 44100
     n_samples = int(duracion_total * sr)
     audio = np.zeros((n_samples, 2), dtype=np.float64)
 
-    # 1. Sonido brillante de monedas/chime en los primeros 0.8s
     notas_coin = [(0.05, 987.77), (0.14, 1318.51), (0.24, 1567.98), (0.35, 2093.00)]
     for t0, freq in notas_coin:
         i0 = int(t0 * sr)
@@ -615,7 +602,6 @@ def generar_sfx_animaciones(duracion_total):
             audio[i0:i0 + dur_n, 0] += onda
             audio[i0:i0 + dur_n, 1] += onda
 
-    # 2. Efecto "Pop!" cuando entra tu sticker animado en pantalla
     for t_pop in [2.5, 16.5]:
         i0 = int(t_pop * sr)
         dur_p = int(0.14 * sr)
@@ -628,10 +614,9 @@ def generar_sfx_animaciones(duracion_total):
             audio[i0:i0 + dur_p, 1] += onda
 
     audio = np.clip(audio, -0.9, 0.9)
-    return AudioArrayClip(audio, fps=sr)
+    return AudioArrayClip(audio, fps=sr).set_duration(duracion_total)
 
 def obtener_clip_flyer_cierre(duracion_flyer=4.0):
-    """Encuadra tu flyer.png de GitHub completo destacando PS4 y PS3 como especialidad."""
     canvas_w, canvas_h = 720, 1280
     lienzo = Image.new("RGB", (canvas_w, canvas_h), (8, 12, 26))
     draw = ImageDraw.Draw(lienzo)
@@ -761,23 +746,29 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     video_completo = concatenate_videoclips([escena_principal, clip_flyer], method="compose")
 
     print("5. Mezclando música gamer + efectos de sonido (SFX)...")
-    pistas_audio = [video_completo.audio, generar_sfx_animaciones(video_completo.duration)]
+    total_dur = video_completo.duration
+    pistas_audio = []
+    if video_completo.audio is not None:
+        pistas_audio.append(video_completo.audio.set_duration(total_dur))
+
+    pistas_audio.append(generar_sfx_animaciones(total_dur))
+
     bgm_path = descargar_musica_fondo()
     if bgm_path and os.path.exists(bgm_path):
         try:
             bgm = AudioFileClip(bgm_path)
-            total_dur = video_completo.duration
             if bgm.duration < total_dur:
                 n_loops = int(total_dur / bgm.duration) + 1
-                bgm = concatenate_videoclips([bgm] * n_loops)
-            bgm = bgm.subclip(0, total_dur).volumex(0.11)
+                bgm = concatenate_audioclips([bgm] * n_loops)
+            bgm = bgm.subclip(0, total_dur).volumex(0.11).set_duration(total_dur)
             pistas_audio.append(bgm)
         except Exception as e:
             print(f"Advertencia BGM: {e}")
 
-    video_completo = video_completo.set_audio(CompositeAudioClip(pistas_audio))
+    audio_final = CompositeAudioClip(pistas_audio).set_duration(total_dur)
+    video_completo = video_completo.set_audio(audio_final)
 
-    print(f"6. Exportando MP4 editado ({video_completo.duration:.1f} segundos)...")
+    print(f"6. Exportando MP4 editado ({total_dur:.1f} segundos)...")
     video_completo.write_videofile(
         archivo_salida,
         fps=30,
