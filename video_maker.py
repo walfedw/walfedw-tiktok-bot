@@ -23,11 +23,13 @@ from moviepy.editor import (
 VOCES = ["es-MX-JorgeNeural", "es-MX-DarianNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
-# Clips de respaldo automático en caso de que aún no subas archivos a la carpeta clips/
-CLIPS_RESPALDO_URLS = [
-    "https://assets.mixkit.co/videos/preview/mixkit-gamer-playing-video-games-in-a-dark-room-43536-large.mp4",
-    "https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-gamer-playing-with-a-controller-43541-large.mp4",
-    "https://assets.mixkit.co/videos/preview/mixkit-close-up-of-a-gamer-playing-video-games-43539-large.mp4"
+# Imágenes HD verificadas de respaldo si la carpeta clips/ está vacía
+IMAGENES_RESPALDO_HD = [
+    "https://cdn.akamai.steamstatic.com/steam/apps/2322010/header.jpg",
+    "https://cdn.akamai.steamstatic.com/steam/apps/1174180/header.jpg",
+    "https://cdn.akamai.steamstatic.com/steam/apps/1817070/header.jpg",
+    "https://cdn.akamai.steamstatic.com/steam/apps/2215430/header.jpg",
+    "https://images.unsplash.com/photo-1507457379470-08b800bebc67?w=1080&h=1920&fit=crop"
 ]
 
 def limpiar_texto(texto):
@@ -58,25 +60,31 @@ async def generar_audio_con_tiempos(texto, archivo_salida):
             print(f"Advertencia con voz {voz}: {e}")
     raise RuntimeError("No se pudo generar el audio de locución.")
 
-def obtener_clips_disponibles():
-    """Busca primero los .mp4 reales en la carpeta clips/. Si está vacía, descarga respaldo."""
-    archivos_locales = sorted(glob.glob("clips/*.mp4") + glob.glob("clips/*.MP4") + glob.glob("clips/*.mov"))
+def obtener_recursos_visuales():
+    """Busca clips .mp4/.mov o imágenes en clips/. Si está vacía, descarga imágenes HD de respaldo."""
+    extensiones = ("clips/*.mp4", "clips/*.MP4", "clips/*.mov", "clips/*.MOV", "clips/*.jpg", "clips/*.png")
+    archivos_locales = []
+    for ext in extensiones:
+        archivos_locales.extend(glob.glob(ext))
+    archivos_locales = sorted(archivos_locales)
+
     if archivos_locales:
-        print(f"Usando {len(archivos_locales)} clips reales encontrados en clips/.")
+        print(f"Usando {len(archivos_locales)} archivos reales encontrados en clips/.")
         return archivos_locales
 
-    print("Carpeta clips/ vacía. Descargando clips gaming de respaldo...")
+    print("Carpeta clips/ vacía. Descargando recursos HD de respaldo...")
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     descargados = []
-    for idx, url in enumerate(CLIPS_RESPALDO_URLS):
-        nombre = f"temp_stock_{idx}.mp4"
+    for idx, url in enumerate(IMAGENES_RESPALDO_HD):
+        nombre = f"temp_stock_{idx}.jpg"
         try:
-            res = requests.get(url, timeout=20)
-            if res.status_code == 200 and len(res.content) > 50000:
+            res = requests.get(url, headers=headers, timeout=15)
+            if res.status_code == 200 and len(res.content) > 3000:
                 with open(nombre, "wb") as f:
                     f.write(res.content)
                 descargados.append(nombre)
         except Exception as e:
-            print(f"Error descargando clip respaldo {idx}: {e}")
+            print(f"Error descargando respaldo {idx}: {e}")
     return descargados
 
 def ajustar_a_vertical(clip, target_w=720, target_h=1280):
@@ -88,39 +96,52 @@ def ajustar_a_vertical(clip, target_w=720, target_h=1280):
         clip = clip.resize(width=target_w)
     return clip.crop(x_center=clip.w / 2, y_center=clip.h / 2, width=target_w, height=target_h)
 
-def construir_fondo_dinamico(duracion_objetivo, lista_clips):
+def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
     """Arma una secuencia de cortes rápidos de ~2.0 segundos cada uno."""
     secuencia = []
     tiempo_acumulado = 0.0
     clips_abiertos = []
 
-    pool = list(lista_clips)
+    pool = [r for r in lista_recursos if os.path.exists(r)]
+    if not pool:
+        print("Sin recursos externos disponibles. Generando fondo oscuro de emergencia...")
+        img_negra = Image.new("RGB", (720, 1280), (10, 14, 24))
+        img_negra.save("temp_bg_black.png")
+        return ImageClip("temp_bg_black.png").set_duration(duracion_objetivo), clips_abiertos
+
     random.shuffle(pool)
     indice = 0
+    errores_seguidos = 0
 
-    while tiempo_acumulado < duracion_objetivo:
+    while tiempo_acumulado < duracion_objetivo and errores_seguidos < len(pool) * 2:
         ruta = pool[indice % len(pool)]
         indice += 1
-        try:
-            v = VideoFileClip(ruta).without_audio()
-            clips_abiertos.append(v)
-            dur_corte = min(random.uniform(1.8, 2.4), duracion_objetivo - tiempo_acumulado)
-            if dur_corte <= 0.15:
-                break
+        dur_corte = min(random.uniform(1.8, 2.3), duracion_objetivo - tiempo_acumulado)
+        if dur_corte <= 0.15:
+            break
 
-            max_start = max(0.0, v.duration - dur_corte - 0.1)
-            start_t = random.uniform(0.0, max_start) if max_start > 0 else 0.0
-            sub = v.subclip(start_t, min(v.duration, start_t + dur_corte))
-            sub = ajustar_a_vertical(sub, 720, 1280)
+        try:
+            if ruta.lower().endswith((".jpg", ".jpeg", ".png")):
+                img_clip = ImageClip(ruta).set_duration(dur_corte)
+                img_clip = ajustar_a_vertical(img_clip, 720, 1280)
+                sub = img_clip.resize(lambda t, d=dur_corte: 1.0 + 0.08 * (t / d)).set_position(("center", "center"))
+                clips_abiertos.append(img_clip)
+            else:
+                v = VideoFileClip(ruta).without_audio()
+                clips_abiertos.append(v)
+                max_start = max(0.0, v.duration - dur_corte - 0.1)
+                start_t = random.uniform(0.0, max_start) if max_start > 0 else 0.0
+                sub = v.subclip(start_t, min(v.duration, start_t + dur_corte))
+                sub = ajustar_a_vertical(sub, 720, 1280)
+
             secuencia.append(sub)
             tiempo_acumulado += sub.duration
+            errores_seguidos = 0
         except Exception as e:
-            print(f"Error procesando clip {ruta}: {e}")
-            if len(pool) == 1:
-                break
+            print(f"Error procesando recurso {ruta}: {e}")
+            errores_seguidos += 1
 
     if not secuencia:
-        # Respaldo de emergencia negro si fallaran todos los videos
         img_negra = Image.new("RGB", (720, 1280), (10, 14, 24))
         img_negra.save("temp_bg_black.png")
         return ImageClip("temp_bg_black.png").set_duration(duracion_objetivo), clips_abiertos
@@ -153,7 +174,6 @@ def renderizar_frame_subtitulo(palabras_grupo, indice_activo, idx_frame):
     for i, palabra in enumerate(palabras_upper):
         w_pal = anchos[i]
         if i == indice_activo:
-            # Caja de resaltado rosa/fucsia estilo CapCut
             pad_x, pad_y = 12, 10
             draw.rounded_rectangle(
                 [x_actual - pad_x, y_texto - 30 - pad_y, x_actual + w_pal + pad_x, y_texto + 30 + pad_y],
@@ -161,7 +181,6 @@ def renderizar_frame_subtitulo(palabras_grupo, indice_activo, idx_frame):
                 fill=(235, 30, 110, 255)
             )
 
-        # Borde negro grueso para máxima legibilidad sobre cualquier gameplay
         for dx, dy in [(-4,-4), (4,-4), (-4,4), (4,4), (-4,0), (4,0), (0,-4), (0,4)]:
             draw.text((x_actual + dx, y_texto + dy), palabra, fill=(0, 0, 0, 255), anchor="lm", font=font)
 
@@ -173,7 +192,7 @@ def renderizar_frame_subtitulo(palabras_grupo, indice_activo, idx_frame):
     return nombre_png
 
 def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
-    """Sincroniza grupos de 2 a 3 palabras con caja saltarina palabra por palabra."""
+    """Sincroniza grupos de 3 palabras con caja saltarina palabra por palabra."""
     if not tiempos_palabras:
         palabras = limpiar_texto(texto_completo).split()
         if not palabras:
@@ -188,7 +207,6 @@ def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
     archivos_temp = []
     frame_id = 0
 
-    # Agrupar de 3 en 3 palabras
     for i in range(0, len(tiempos_palabras), 3):
         grupo = tiempos_palabras[i:i+3]
         textos_grupo = [g["palabra"] for g in grupo]
@@ -223,7 +241,6 @@ def obtener_clip_flyer_cierre(duracion_flyer=2.8):
             clip_img = ajustar_a_vertical(clip_img, 720, 1280)
             return clip_img.resize(lambda t: 1.05 - 0.05 * (t / duracion_flyer)).set_position(("center", "center"))
 
-    # Respaldo si aún no se sube flyer.jpg
     img = Image.new("RGB", (720, 1280), (12, 18, 32))
     draw = ImageDraw.Draw(img)
     try:
@@ -264,9 +281,9 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     audio_voz = AudioFileClip(audio_voz_path)
     duracion_voz = audio_voz.duration
 
-    print("2. Preparando cortes rápidos con clips de video...")
-    lista_clips = obtener_clips_disponibles()
-    video_broll, clips_abiertos = construir_fondo_dinamico(duracion_voz, lista_clips)
+    print("2. Preparando cortes rápidos visuales...")
+    lista_recursos = obtener_recursos_visuales()
+    video_broll, clips_abiertos = construir_fondo_dinamico(duracion_voz, lista_recursos)
 
     print("3. Renderizando subtítulos dinámicos estilo CapCut...")
     clips_subs, archivos_subs_temp = crear_subtitulos_capcut(tiempos_palabras, locucion, duracion_voz)
@@ -310,14 +327,13 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
         except:
             pass
 
-    # Limpieza de archivos temporales
     for f in [audio_voz_path, "temp_bg_black.png", "temp_flyer_fallback.png"] + archivos_subs_temp:
         if os.path.exists(f):
             try:
                 os.remove(f)
             except:
                 pass
-    for stock in glob.glob("temp_stock_*.mp4"):
+    for stock in glob.glob("temp_stock_*"):
         try:
             os.remove(stock)
         except:
