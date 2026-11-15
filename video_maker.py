@@ -6,15 +6,20 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 import os
 import re
 import glob
+import math
 import random
 import asyncio
 import subprocess
 import requests
+import numpy as np
 import edge_tts
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
+from moviepy.audio.AudioClip import AudioArrayClip
 from moviepy.editor import (
     VideoFileClip,
+    VideoClip,
     ImageClip,
+    ColorClip,
     AudioFileClip,
     CompositeVideoClip,
     CompositeAudioClip,
@@ -28,14 +33,14 @@ def limpiar_texto(texto):
     return re.sub(r'[^\w\s.,¡!¿?áéíóúÁÉÍÓÚñÑ\-]', '', texto).strip()
 
 async def generar_audio_con_tiempos(texto, archivo_salida):
-    """Genera locución natural y captura el timestamp exacto de cada palabra."""
+    """Genera locución con energía y captura el timestamp exacto de cada palabra."""
     texto_limpio = limpiar_texto(texto)
     voces_rotadas = list(VOCES)
     random.shuffle(voces_rotadas)
 
     for voz in voces_rotadas:
         try:
-            communicate = edge_tts.Communicate(texto_limpio, voz, rate="+4%")
+            communicate = edge_tts.Communicate(texto_limpio, voz, rate="+6%")
             tiempos_palabras = []
             with open(archivo_salida, "wb") as f:
                 async for chunk in communicate.stream():
@@ -77,7 +82,6 @@ def buscar_clips_locales():
     return encontrados
 
 def buscar_app_id_dinamico(nombre_juego):
-    """Consulta la API de búsqueda de Steam en vivo para encontrar cualquier juego del guion."""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     limpio = re.sub(r'[^\w\s\-:]', '', nombre_juego).strip()
     try:
@@ -87,12 +91,11 @@ def buscar_app_id_dinamico(nombre_juego):
             items = res.json().get("items", [])
             if items:
                 return str(items[0]["id"])
-    except Exception as e:
-        print(f"Error buscando AppID dinámico para {nombre_juego}: {e}")
+    except Exception:
+        pass
     return None
 
 def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=24, duracion=8):
-    """Extrae un tramo de puro gameplay en vertical 720x1280 sin audio."""
     cmd = [
         "ffmpeg", "-y",
         "-ss", str(segundo_inicio),
@@ -110,12 +113,11 @@ def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=24, duracion
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=40)
         if os.path.exists(ruta_salida) and os.path.getsize(ruta_salida) > 100000:
             return True
-    except Exception as e:
-        print(f"FFmpeg timeout/error con stream: {e}")
+    except Exception:
+        pass
     return False
 
 def descargar_gameplay_dinamico(juegos_solicitados, max_clips=6):
-    """Busca y descarga gameplays reales para los juegos PS4/PS3 elegidos por la IA."""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     cookies_edad = {"birthtime": "568022401", "lastagecheckage": "1-0-1988", "mature_content": "1"}
     clips_listos = []
@@ -152,17 +154,15 @@ def descargar_gameplay_dinamico(juegos_solicitados, max_clips=6):
 
                 ruta_mp4 = f"temp_gp_{idx}_{t_idx}.mp4"
                 inicio_accion = random.randint(20, 40)
-                print(f"Extrayendo gameplay dinámico de '{juego}' (desde {inicio_accion}s)...")
                 if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio_accion, duracion=8):
                     print(f"[OK Gameplay Dinámico] {juego}")
                     clips_listos.append(ruta_mp4)
-        except Exception as e:
-            print(f"Advertencia stream {juego}: {e}")
+        except Exception:
+            pass
 
     return clips_listos
 
 def descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3):
-    """Busca clips de gameplay en comunidades de PS4/PS3 para exclusivos de consola (ej. Bloodborne)."""
     headers = {"User-Agent": "Mozilla/5.0 (compatible; WalfedwDynamicFinder/2.0)"}
     clips = []
 
@@ -186,7 +186,6 @@ def descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3):
                     if v_url and 4 <= rv.get("duration", 0) <= 90:
                         ruta_out = f"temp_comm_{idx}.mp4"
                         if extraer_clip_con_ffmpeg(v_url, ruta_out, segundo_inicio=2, duracion=7):
-                            print(f"[OK Clip Comunidad PS4] {juego}")
                             clips.append(ruta_out)
                             break
         except Exception:
@@ -195,7 +194,6 @@ def descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3):
     return clips
 
 def obtener_recursos_visuales(juegos_solicitados):
-    """Combina gameplays dinámicos de PS4/PS3 con tus clips de GoldHEN/consola."""
     clips_locales = buscar_clips_locales()
     clips_steam = descargar_gameplay_dinamico(juegos_solicitados, max_clips=5)
     clips_comm = descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3) if len(clips_steam) < 4 else []
@@ -210,7 +208,6 @@ def obtener_recursos_visuales(juegos_solicitados):
     mezcla.extend(gameplays[3:])
 
     if mezcla:
-        print(f"Recursos dinámicos listos: {len(gameplays)} gameplays + {len(clips_locales)} clips consola.")
         return mezcla
 
     fotos = []
@@ -237,9 +234,10 @@ def ajustar_a_vertical_hd(clip, target_w=720, target_h=1280):
         clip = clip.resize(width=target_w)
     return clip.crop(x_center=clip.w / 2, y_center=clip.h / 2, width=target_w, height=target_h)
 
-def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
-    """Corta y mutea todos los clips con ritmo dinámico de 2.1s a 2.5s."""
+def construir_fondo_dinamico_con_flashes(duracion_objetivo, lista_recursos):
+    """Arma el montaje con cortes rápidos (1.9s-2.3s), zoom punch y destellos flash en cada cambio."""
     secuencia = []
+    flashes = []
     tiempo_acumulado = 0.0
     clips_abiertos = []
 
@@ -247,7 +245,7 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
     if not pool:
         img_negra = Image.new("RGB", (720, 1280), (10, 14, 24))
         img_negra.save("temp_bg_black.png")
-        return ImageClip("temp_bg_black.png").set_duration(duracion_objetivo), clips_abiertos
+        return ImageClip("temp_bg_black.png").set_duration(duracion_objetivo), [], clips_abiertos
 
     indice = 0
     errores = 0
@@ -255,7 +253,7 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
     while tiempo_acumulado < duracion_objetivo and errores < len(pool) * 2:
         ruta = pool[indice % len(pool)]
         indice += 1
-        dur_corte = min(random.uniform(2.1, 2.5), duracion_objetivo - tiempo_acumulado)
+        dur_corte = min(random.uniform(1.9, 2.3), duracion_objetivo - tiempo_acumulado)
         if dur_corte <= 0.15:
             break
 
@@ -263,20 +261,33 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
             if ruta.lower().endswith((".jpg", ".jpeg", ".png")):
                 base = ImageClip(ruta).set_duration(dur_corte)
                 base = ajustar_a_vertical_hd(base, 720, 1280)
-                sub = base.resize(lambda t, d=dur_corte: 1.0 + 0.05 * (t / max(0.1, d))).set_position(("center", "center"))
+                sub = base.resize(lambda t, d=dur_corte: 1.0 + 0.07 * (t / max(0.1, d))).set_position(("center", "center"))
                 clips_abiertos.append(base)
             else:
                 v = VideoFileClip(ruta).without_audio()
                 clips_abiertos.append(v)
 
                 ciclo = indice // len(pool)
-                offset_ciclo = (ciclo * 2.5) % max(0.5, v.duration - dur_corte)
+                offset_ciclo = (ciclo * 2.4) % max(0.5, v.duration - dur_corte)
                 max_start = max(0.0, v.duration - dur_corte - 0.1)
                 start_t = min(max_start, offset_ciclo)
 
                 raw_sub = v.subclip(start_t, min(v.duration, start_t + dur_corte))
                 raw_sub = ajustar_a_vertical_hd(raw_sub, 720, 1280)
-                sub = raw_sub.resize(lambda t, d=dur_corte: 1.02 + 0.04 * (t / max(0.1, d))).set_position(("center", "center"))
+                # Zoom punch inicial al entrar cada clip
+                sub = raw_sub.resize(
+                    lambda t, d=dur_corte: (1.08 - 0.06 * min(1.0, t / 0.25)) + 0.03 * (t / max(0.1, d))
+                ).set_position(("center", "center"))
+
+            # Añadir destello flash neón de 0.12s al cambiar de escena
+            if tiempo_acumulado > 0.2:
+                flash = (
+                    ColorClip(size=(720, 1280), color=(210, 245, 255))
+                    .set_start(tiempo_acumulado)
+                    .set_duration(0.12)
+                    .set_opacity(0.45)
+                )
+                flashes.append(flash)
 
             secuencia.append(sub)
             tiempo_acumulado += sub.duration
@@ -288,13 +299,196 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
     if not secuencia:
         img_negra = Image.new("RGB", (720, 1280), (10, 14, 24))
         img_negra.save("temp_bg_black.png")
-        return ImageClip("temp_bg_black.png").set_duration(duracion_objetivo), clips_abiertos
+        return ImageClip("temp_bg_black.png").set_duration(duracion_objetivo), [], clips_abiertos
 
     video_concat = concatenate_videoclips(secuencia, method="compose")
-    return video_concat.subclip(0, min(duracion_objetivo, video_concat.duration)), clips_abiertos
+    return video_concat.subclip(0, min(duracion_objetivo, video_concat.duration)), flashes, clips_abiertos
+
+def crear_lluvia_monedas_y_destellos(duracion=2.8):
+    """Animación viral de lluvia de monedas doradas y chispas neón en los primeros segundos."""
+    w, h = 720, 1280
+    random.seed(42)
+    particulas = []
+    for _ in range(26):
+        particulas.append({
+            "x": random.uniform(30, w - 30),
+            "y0": random.uniform(-450, 200),
+            "vy": random.uniform(480, 820),
+            "vx": random.uniform(-60, 60),
+            "radio": random.randint(18, 34),
+            "fase": random.uniform(0, 6.28),
+            "vel_giro": random.uniform(6, 14),
+            "es_moneda": random.random() > 0.35
+        })
+
+    cache = {"t_key": -1, "rgb": None, "mask": None}
+
+    def render_t(t):
+        t_key = int(t * 24)
+        if cache["t_key"] == t_key:
+            return cache["rgb"], cache["mask"]
+
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        alpha_global = int(255 * min(1.0, max(0.0, (duracion - t) / 0.5)))
+
+        for p in particulas:
+            cx = p["x"] + p["vx"] * t + 18 * math.sin(t * 4 + p["fase"])
+            cy = p["y0"] + p["vy"] * t
+            if cy < -50 or cy > h + 50:
+                continue
+
+            r = p["radio"]
+            if p["es_moneda"]:
+                # Efecto giro 3D de moneda dorada
+                escala_x = max(0.22, abs(math.cos(t * p["vel_giro"] + p["fase"])))
+                rx = int(r * escala_x)
+                draw.ellipse(
+                    [cx - rx, cy - r, cx + rx, cy + r],
+                    fill=(255, 210, 0, alpha_global),
+                    outline=(255, 250, 180, alpha_global),
+                    width=3
+                )
+                if rx > 8:
+                    draw.ellipse(
+                        [cx - rx // 2, cy - r // 2, cx + rx // 2, cy + r // 2],
+                        outline=(210, 140, 0, alpha_global),
+                        width=2
+                    )
+            else:
+                # Destello estrella neón cian/dorado
+                s = int(r * 0.85)
+                draw.polygon(
+                    [(cx, cy - s), (cx + s // 3, cy - s // 3), (cx + s, cy),
+                     (cx + s // 3, cy + s // 3), (cx, cy + s), (cx - s // 3, cy + s // 3),
+                     (cx - s, cy), (cx - s // 3, cy - s // 3)],
+                    fill=(120, 245, 255, alpha_global)
+                )
+
+        arr = np.array(img)
+        cache["t_key"] = t_key
+        cache["rgb"] = arr[:, :, :3]
+        cache["mask"] = arr[:, :, 3].astype(np.float64) / 255.0
+        return cache["rgb"], cache["mask"]
+
+    clip_rgb = VideoClip(lambda t: render_t(t)[0], duration=duracion)
+    clip_mask = VideoClip(lambda t: render_t(t)[1], duration=duracion, ismask=True)
+    return clip_rgb.set_mask(clip_mask)
+
+def encontrar_foto_creador():
+    """Busca walfedw.jpg o flyer.png en el repositorio para usar tu imagen real en los stickers."""
+    for nombre in ["walfedw.jpg", "walfedw.png", "flyer.png", "flyer.jpg"]:
+        if os.path.exists(nombre):
+            return nombre
+    return None
+
+def crear_stickers_animados_creador(duracion_total):
+    """Crea tu avatar flotante arriba a la izquierda + tus apariciones pop-up con rebote."""
+    ruta_foto = encontrar_foto_creador()
+    if not ruta_foto:
+        return [], []
+
+    archivos_temp = []
+    clips_stickers = []
+
+    try:
+        foto_orig = Image.open(ruta_foto).convert("RGB")
+        # Recorte cuadrado centrado en ti (rostro y mando)
+        w, h = foto_orig.size
+        lado = min(w, h)
+        left = (w - lado) // 2
+        top = max(0, int((h - lado) * 0.25))
+        cuadro = foto_orig.crop((left, top, left + lado, top + lado))
+
+        # 1. Avatar tipo Streamer en esquina superior izquierda (como en tu video PES 2027)
+        tam_avatar = 148
+        resample = getattr(Image, "Resampling", Image).LANCZOS
+        avatar_img = cuadro.resize((tam_avatar, tam_avatar), resample)
+
+        mask_circ = Image.new("L", (tam_avatar, tam_avatar), 0)
+        ImageDraw.Draw(mask_circ).ellipse([4, 4, tam_avatar - 4, tam_avatar - 4], fill=255)
+
+        badge = Image.new("RGBA", (tam_avatar + 16, tam_avatar + 36), (0, 0, 0, 0))
+        b_draw = ImageDraw.Draw(badge)
+        # Aro neón brillante
+        b_draw.ellipse([2, 2, tam_avatar + 14, tam_avatar + 14], fill=(0, 220, 255, 255))
+        badge.paste(avatar_img, (8, 8), mask_circ)
+        b_draw.rounded_rectangle([14, tam_avatar - 8, tam_avatar + 2, tam_avatar + 22], radius=10, fill=(235, 30, 110, 255))
+        try:
+            f_tag = ImageFont.truetype("DejaVuSans-Bold.ttf", 17)
+        except:
+            f_tag = ImageFont.load_default()
+        b_draw.text(((tam_avatar + 16) // 2, tam_avatar + 7), "EN VIVO • PS4", fill=(255, 255, 255, 255), anchor="mm", font=f_tag)
+
+        ruta_badge = "temp_avatar_badge.png"
+        badge.save(ruta_badge)
+        archivos_temp.append(ruta_badge)
+
+        clip_avatar = (
+            ImageClip(ruta_badge)
+            .set_duration(duracion_total)
+            .set_position(lambda t: (26, int(138 + 8 * math.sin(t * 3.5))))
+        )
+        clips_stickers.append(clip_avatar)
+
+        # 2. Sticker Pop-Up más grande que aparece con rebote (como en tu video GoldHEN 13.52)
+        tam_pop = 230
+        pop_img = cuadro.resize((tam_pop, tam_pop), resample)
+        mask_pop = Image.new("L", (tam_pop, tam_pop), 0)
+        ImageDraw.Draw(mask_pop).rounded_rectangle([0, 0, tam_pop, tam_pop], radius=36, fill=255)
+
+        pop_card = Image.new("RGBA", (tam_pop + 16, tam_pop + 16), (0, 0, 0, 0))
+        p_draw = ImageDraw.Draw(pop_card)
+        p_draw.rounded_rectangle([0, 0, tam_pop + 16, tam_pop + 16], radius=40, fill=(255, 225, 0, 255))
+        pop_card.paste(pop_img, (8, 8), mask_pop)
+
+        ruta_pop = "temp_popup_creator.png"
+        pop_card.save(ruta_pop)
+        archivos_temp.append(ruta_pop)
+
+        momentos_pop = [2.5, 16.5]
+        for t_inicio in momentos_pop:
+            if t_inicio + 3.0 < duracion_total:
+                c_pop = (
+                    ImageClip(ruta_pop)
+                    .set_start(t_inicio)
+                    .set_duration(3.0)
+                    .resize(lambda t: max(0.3, 1.0 - 0.35 * math.exp(-8 * t) * math.cos(16 * t)))
+                    .set_position(("center", 545))
+                )
+                clips_stickers.append(c_pop)
+
+    except Exception as e:
+        print(f"Advertencia stickers creador: {e}")
+
+    return clips_stickers, archivos_temp
+
+def crear_emoji_reaccion_animado(duracion_total):
+    """Dibuja un badge/emoji gamer animado rebotando abajo a la derecha (estilo tus videos virales)."""
+    size = 86
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    # Cara gamer amarilla brillante con lentes oscuros estilo pixel/cool
+    draw.ellipse([4, 4, size - 4, size - 4], fill=(255, 215, 0, 255), outline=(255, 255, 255, 255), width=3)
+    # Lentes negros cool
+    draw.rounded_rectangle([14, 26, 41, 43], radius=5, fill=(15, 20, 35, 255))
+    draw.rounded_rectangle([45, 26, 72, 43], radius=5, fill=(15, 20, 35, 255))
+    draw.line([(39, 31), (47, 31)], fill=(15, 20, 35, 255), width=4)
+    # Sonrisa gamer
+    draw.arc([24, 38, 62, 68], start=15, end=165, fill=(15, 20, 35, 255), width=5)
+
+    ruta_emoji = "temp_emoji_cool.png"
+    img.save(ruta_emoji)
+
+    clip_emoji = (
+        ImageClip(ruta_emoji)
+        .set_duration(duracion_total)
+        .set_position(lambda t: (605, int(1038 - abs(math.sin(t * 4.8)) * 18)))
+    )
+    return clip_emoji, ruta_emoji
 
 def crear_overlay_marca_persistente(duracion):
-    """Barra superior e inferior dando prioridad a PS4 y PS3 (y soporte PS5)."""
     w, h = 720, 1280
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -309,7 +503,7 @@ def crear_overlay_marca_persistente(duracion):
     draw.text((360, 74), "@WALFEDW • WALFEDW SERVICES", fill=(255, 255, 255, 255), anchor="mm", font=f_brand)
     draw.text((360, 102), "FLASHEO PS4 Y PS3 • TAMBIÉN PS5", fill=(0, 220, 255, 255), anchor="mm", font=f_sub)
 
-    draw.rounded_rectangle([90, 1140, 630, 1192], radius=18, fill=(8, 15, 30, 205), outline=(255, 225, 0, 220), width=2)
+    draw.rounded_rectangle([90, 1140, 630, 1192], radius=18, fill=(8, 15, 30, 215), outline=(255, 225, 0, 235), width=2)
     draw.text((360, 1166), "CONSULTA TU VERSIÓN • WA: 914 899 697", fill=(255, 230, 0, 255), anchor="mm", font=f_sub)
 
     ruta_png = "temp_brand_overlay.png"
@@ -317,7 +511,6 @@ def crear_overlay_marca_persistente(duracion):
     return ImageClip(ruta_png).set_duration(duracion), ruta_png
 
 def renderizar_frame_subtitulo(palabras_grupo, indice_activo, idx_frame):
-    """Subtítulos estilo CapCut autoescalados para que nunca se corten a los lados."""
     ancho, alto = 720, 220
     img = Image.new("RGBA", (ancho, alto), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -397,11 +590,45 @@ def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
                 ImageClip(png_path)
                 .set_start(t_ini)
                 .set_duration(dur)
+                .resize(lambda t: 1.06 - 0.06 * min(1.0, t / 0.12))
                 .set_position(("center", 820))
             )
             clips_subs.append(clip_txt)
 
     return clips_subs, archivos_temp
+
+def generar_sfx_animaciones(duracion_total):
+    """Genera efectos de sonido estilo CapCut (campana de monedas al inicio + pop en stickers)."""
+    sr = 44100
+    n_samples = int(duracion_total * sr)
+    audio = np.zeros((n_samples, 2), dtype=np.float64)
+
+    # 1. Sonido brillante de monedas/chime en los primeros 0.8s
+    notas_coin = [(0.05, 987.77), (0.14, 1318.51), (0.24, 1567.98), (0.35, 2093.00)]
+    for t0, freq in notas_coin:
+        i0 = int(t0 * sr)
+        dur_n = int(0.28 * sr)
+        if i0 + dur_n < n_samples:
+            t_arr = np.linspace(0, 0.28, dur_n)
+            env = np.exp(-12 * t_arr)
+            onda = 0.22 * env * (np.sin(2 * np.pi * freq * t_arr) + 0.3 * np.sin(4 * np.pi * freq * t_arr))
+            audio[i0:i0 + dur_n, 0] += onda
+            audio[i0:i0 + dur_n, 1] += onda
+
+    # 2. Efecto "Pop!" cuando entra tu sticker animado en pantalla
+    for t_pop in [2.5, 16.5]:
+        i0 = int(t_pop * sr)
+        dur_p = int(0.14 * sr)
+        if i0 + dur_p < n_samples:
+            t_arr = np.linspace(0, 0.14, dur_p)
+            freq_sweep = 320 + 680 * (t_arr / 0.14)
+            env = np.exp(-18 * t_arr)
+            onda = 0.28 * env * np.sin(2 * np.pi * freq_sweep * t_arr)
+            audio[i0:i0 + dur_p, 0] += onda
+            audio[i0:i0 + dur_p, 1] += onda
+
+    audio = np.clip(audio, -0.9, 0.9)
+    return AudioArrayClip(audio, fps=sr)
 
 def obtener_clip_flyer_cierre(duracion_flyer=4.0):
     """Encuadra tu flyer.png de GitHub completo destacando PS4 y PS3 como especialidad."""
@@ -436,7 +663,6 @@ def obtener_clip_flyer_cierre(duracion_flyer=4.0):
 
     y_fin_imagen = 650
     if ruta_flyer:
-        print(f"Integrando tu imagen oficial completa de GitHub: {ruta_flyer}")
         foto = Image.open(ruta_flyer).convert("RGB")
         fw, fh = foto.size
         nuevo_w = 672
@@ -475,7 +701,7 @@ def obtener_clip_flyer_cierre(duracion_flyer=4.0):
     lienzo.save(salida_tmp)
 
     clip_img = ImageClip(salida_tmp).set_duration(duracion_flyer)
-    return clip_img.resize(lambda t: 1.03 - 0.03 * (t / duracion_flyer)).set_position(("center", "center"))
+    return clip_img.resize(lambda t: 1.04 - 0.04 * (t / duracion_flyer)).set_position(("center", "center"))
 
 def descargar_musica_fondo():
     archivo_bgm = "bgm.mp3"
@@ -487,8 +713,8 @@ def descargar_musica_fondo():
             with open(archivo_bgm, "wb") as f:
                 f.write(res.content)
             return archivo_bgm
-    except Exception as e:
-        print(f"No se pudo descargar BGM: {e}")
+    except Exception:
+        pass
     return None
 
 def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
@@ -501,31 +727,41 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
         ["God of War Ragnarok", "Ghost of Tsushima", "Red Dead Redemption 2", "Grand Theft Auto V"]
     )
 
-    print("1. Generando locución completa y tiempos de subtítulos...")
+    print("1. Generando voz con energía y timestamps...")
     audio_voz_path = "temp_voz_viral.mp3"
     tiempos_palabras = asyncio.run(generar_audio_con_tiempos(locucion, audio_voz_path))
     audio_voz = AudioFileClip(audio_voz_path).volumex(1.25)
 
     duracion_escena_principal = max(27.0, audio_voz.duration + 0.6)
 
-    print("2. Buscando y extrayendo gameplays de PS4/PS3 para:", juegos_visuales)
+    print("2. Montando gameplays con zoom punch y transiciones flash...")
     lista_recursos = obtener_recursos_visuales(juegos_visuales)
-    video_broll, clips_abiertos = construir_fondo_dinamico(duracion_escena_principal, lista_recursos)
+    video_broll, clips_flash, clips_abiertos = construir_fondo_dinamico_con_flashes(duracion_escena_principal, lista_recursos)
 
-    print("3. Añadiendo marca @WALFEDW (PS4 y PS3) y subtítulos autoajustados...")
+    print("3. Agregando lluvia de monedas, tu avatar flotante, pop-ups y subtítulos...")
+    lluvia_monedas = crear_lluvia_monedas_y_destellos(duracion=2.8)
+    stickers_creador, temp_stickers = crear_stickers_animados_creador(duracion_escena_principal)
+    emoji_animado, temp_emoji = crear_emoji_reaccion_animado(duracion_escena_principal)
     overlay_marca, ruta_marca_png = crear_overlay_marca_persistente(duracion_escena_principal)
     clips_subs, archivos_subs_temp = crear_subtitulos_capcut(tiempos_palabras, locucion, audio_voz.duration)
 
-    escena_principal = CompositeVideoClip(
-        [video_broll, overlay_marca] + clips_subs,
-        size=(720, 1280)
-    ).set_audio(audio_voz)
+    capas_escena = (
+        [video_broll]
+        + clips_flash
+        + [lluvia_monedas, overlay_marca]
+        + stickers_creador
+        + [emoji_animado]
+        + clips_subs
+    )
 
-    print("4. Cerrando con tu flyer.png oficial de GitHub (4.0s)...")
+    escena_principal = CompositeVideoClip(capas_escena, size=(720, 1280)).set_audio(audio_voz)
+
+    print("4. Cerrando con tu flyer oficial de GitHub (4.0s)...")
     clip_flyer = obtener_clip_flyer_cierre(duracion_flyer=4.0)
     video_completo = concatenate_videoclips([escena_principal, clip_flyer], method="compose")
 
-    print("5. Mezclando música de fondo suave (9% volumen)...")
+    print("5. Mezclando música gamer + efectos de sonido (SFX)...")
+    pistas_audio = [video_completo.audio, generar_sfx_animaciones(video_completo.duration)]
     bgm_path = descargar_musica_fondo()
     if bgm_path and os.path.exists(bgm_path):
         try:
@@ -534,13 +770,14 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
             if bgm.duration < total_dur:
                 n_loops = int(total_dur / bgm.duration) + 1
                 bgm = concatenate_videoclips([bgm] * n_loops)
-            bgm = bgm.subclip(0, total_dur).volumex(0.09)
-            audio_final = CompositeAudioClip([video_completo.audio, bgm])
-            video_completo = video_completo.set_audio(audio_final)
+            bgm = bgm.subclip(0, total_dur).volumex(0.11)
+            pistas_audio.append(bgm)
         except Exception as e:
             print(f"Advertencia BGM: {e}")
 
-    print(f"6. Exportando MP4 final ({video_completo.duration:.1f} segundos)...")
+    video_completo = video_completo.set_audio(CompositeAudioClip(pistas_audio))
+
+    print(f"6. Exportando MP4 editado ({video_completo.duration:.1f} segundos)...")
     video_completo.write_videofile(
         archivo_salida,
         fps=30,
@@ -559,7 +796,8 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
             pass
 
     temporales = (
-        [audio_voz_path, "temp_bg_black.png", "temp_flyer_github_card.png", ruta_marca_png]
+        [audio_voz_path, "temp_bg_black.png", "temp_flyer_github_card.png", ruta_marca_png, temp_emoji]
+        + temp_stickers
         + archivos_subs_temp
         + glob.glob("temp_gp_*.mp4")
         + glob.glob("temp_comm_*.mp4")
