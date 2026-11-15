@@ -20,7 +20,8 @@
         "¡Este viernes, el valor de tu PS3/PS4/PS5 vuelve a brillar!",
         "¡Este viernes invierte tu consola en una segunda vida brillante!",
         "¿Con tu consola estancada sigue soñando con acción pura?",
-        "Yo te flasheo tu consola e instalamos los juegos que tú elijas."
+        "Yo te flasheo tu consola e instalamos los juegos que tú elijas.",
+        "¿Ya viste lo último que está pasando con"
     ],
     "juegos": [
         "God of War",
@@ -32,6 +33,13 @@
         "Marvels Spider-Man Remastered",
         "Horizon Forbidden West",
         "God of War Ragnarok",
-        "Marvels Spider-Man 2"
+        "Marvels Spider-Man 2",
+        "Black Myth Wukong",
+        "Tekken 8",
+        "Gran Turismo 7",
+        "Bloodborne"
+    ],
+    "temas": [
+        "Do not request games/FPKGs do not a"
     ]
 }
