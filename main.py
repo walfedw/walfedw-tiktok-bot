@@ -12,13 +12,10 @@ def enviar_a_telegram(video_path, titulo, guion_completo, hashtags):
         raise ValueError("Error: Faltan las credenciales de Telegram.")
 
     url_video = f"https://api.telegram.org/bot{token}/sendVideo"
-    
-    guion_caption = guion_completo if len(guion_completo) <= 650 else guion_completo[:647] + "..."
-
     mensaje_caption = (
-        f"🎬 *¡NUEVO VIDEO PARA TIKTOK (WALFEDW)!*\n\n"
-        f"📌 *Título:* {titulo}\n\n"
-        f"📝 *Guion:*\n{guion_caption}\n\n"
+        f"🔥 *¡NUEVO TIKTOK VIRAL (WALFEDW SERVICES)!*\n\n"
+        f"📌 *Enfoque:* {titulo}\n\n"
+        f"🎙️ *Guion:*\n{guion_completo}\n\n"
         f"🏷️ *Hashtags:*\n{hashtags}"
     )
 
@@ -37,29 +34,23 @@ def enviar_a_telegram(video_path, titulo, guion_completo, hashtags):
         raise RuntimeError(f"Error al enviar a Telegram ({response.status_code}): {response.text}")
 
 def main():
-    print("1. Buscando tendencias de Scene...")
-    noticias = obtener_noticias()
-    if not noticias:
-        print("No se encontraron noticias.")
-        return
+    print("1. Consultando novedades de la Scene...")
+    noticias = obtener_noticias() or []
 
-    print("2. Generando guion comercial para Walfedw...")
+    print("2. Generando guion viral corto para Walfedw Services...")
     datos = generar_guion(noticias)
 
-    escenas = datos.get("escenas", [])
-    texto_completo = f"{datos.get('gancho_locucion', '')} " + " ".join([e.get("locucion", "") for e in escenas]) + f" {datos.get('cierre_locucion', '')}"
-
-    print("3. Renderizando video optimizado para celular...")
+    print("3. Renderizando video con cortes rápidos, subtítulos CapCut y flyer...")
     archivo_video = crear_video(datos)
 
-    print("4. Enviando el video a Telegram...")
+    print("4. Enviando a Telegram...")
     enviar_a_telegram(
-        archivo_video, 
-        datos.get("titulo_general", "FLASHEO Y JUEGOS PS4"), 
-        texto_completo, 
+        archivo_video,
+        datos.get("titulo_general", "Flasheo PS3 • PS4 • PS5"),
+        datos.get("locucion_completa", ""),
         datos.get("hashtags", "#PS4Flasheada #Walfedw")
     )
-    print("¡Proceso finalizado correctamente!")
+    print("¡Listo!")
 
 if __name__ == "__main__":
     main()
