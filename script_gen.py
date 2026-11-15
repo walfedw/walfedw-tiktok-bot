@@ -1,59 +1,36 @@
 import os
 import json
 import time
+import random
 import requests
 
 HISTORIAL_FILE = "historial.json"
 
-# Catálogo verificado de juegos de PS4 con imágenes y locuciones exactas
-CATALOGO_JUEGOS_REALES = [
+GUIONES_VIRALES_BASE = [
     {
-        "item": "The Last of Us Part II",
-        "detalle": "Gráficos brutales e historia impactante",
-        "locucion": "En el número uno, The Last of Us Part II. Libera tu PS4 en Walfedw y disfrútalo al máximo.",
-        "busqueda_imagen": "The Last of Us Part 2"
+        "tema": "Consola guardada sin usar",
+        "locucion": "Esa PS4 ahí sentada puede hacer mucho más de lo que crees. Flashéala en Walfedw para obtener miles de juegos sin costos elevados. Contáctanos hoy mismo para liberar tu consola.",
+        "hashtags": "#PS4Flasheada #FlasheoPS4 #JuegosPS4 #PlayStation #Walfedw"
     },
     {
-        "item": "God of War Ragnarök",
-        "detalle": "Combate fluido a 60 FPS en tu PS4",
-        "locucion": "Número dos, God of War Ragnarök. Flashea tu consola con nosotros e instala este juegazo.",
-        "busqueda_imagen": "God of War Ragnarok"
+        "tema": "Dejar de gastar en discos caros",
+        "locucion": "¿Sigues gastando un dineral por cada juego físico? Trae tu PS3, PS4 o PS5 a Walfedw. La liberamos por software y te la entregamos repleta con los mejores títulos listos para jugar.",
+        "hashtags": "#FlasheoPS4 #PS4Liberada #JuegosGratisPS4 #PlayStationPeru #Walfedw"
     },
     {
-        "item": "Marvel's Spider-Man",
-        "detalle": "Balanceo y acción total por Nueva York",
-        "locucion": "Número tres, Marvel's Spider-Man. Te cargamos el catálogo completo en tu PS4 liberada.",
-        "busqueda_imagen": "Marvels Spider-Man PS4"
+        "tema": "Parches 60 FPS y Mods exclusivos",
+        "locucion": "Tu PS4 tiene potencia oculta que no estás aprovechando. En Walfedw liberamos tu sistema, activamos parches a 60 FPS y te instalamos el catálogo completo con garantía total.",
+        "hashtags": "#PS460FPS #FlasheoConsolas #PS4Flasheada #GamerPeru #Walfedw"
     },
     {
-        "item": "Red Dead Redemption 2",
-        "detalle": "El mundo abierto más realista",
-        "locucion": "En el número uno, Red Dead Redemption 2. Trae tu PS4 a Walfedw y te lo instalamos hoy.",
-        "busqueda_imagen": "Red Dead Redemption 2"
+        "tema": "Sagas completas listas para jugar",
+        "locucion": "God of War, Red Dead Redemption 2, Spider-Man y FC listos en tu consola sin restricciones. Escríbenos al WhatsApp de Walfedw y cotiza el flasheo de tu PS3, PS4 o PS5.",
+        "hashtags": "#GodOfWar #PS4Flasheada #FlasheoPS4 #JuegosPS4 #Walfedw"
     },
     {
-        "item": "Grand Theft Auto V",
-        "detalle": "Los Santos con mods y menús de trucos",
-        "locucion": "Número dos, Grand Theft Auto V. Liberamos tu PS4 para que juegues sin pagar demás.",
-        "busqueda_imagen": "Grand Theft Auto V"
-    },
-    {
-        "item": "Ghost of Tsushima",
-        "detalle": "Combate samurái a máxima velocidad",
-        "locucion": "Número tres, Ghost of Tsushima. Escríbenos al privado para liberar tu consola y cargarlo.",
-        "busqueda_imagen": "Ghost of Tsushima"
-    },
-    {
-        "item": "Bloodborne",
-        "detalle": "Exclusivo gótico a 60 FPS",
-        "locucion": "En el número uno, Bloodborne. Activa el parche exclusivo de 60 FPS flasheando tu PS4 en Walfedw.",
-        "busqueda_imagen": "Bloodborne"
-    },
-    {
-        "item": "Resident Evil 4 Remake",
-        "detalle": "Terror y acción de última generación",
-        "locucion": "Número dos, Resident Evil 4 Remake. Liberamos tu sistema PS4 con el último software.",
-        "busqueda_imagen": "Resident Evil 4 Remake"
+        "tema": "Servicio rápido y 100% seguro",
+        "locucion": "No dejes tu consola juntando polvo en el cuarto. En Walfedw realizamos flasheo 100% seguro, instalación rápida de juegos y actualizaciones incluidas. Mándanos mensaje ahora.",
+        "hashtags": "#ConsolaLiberada #FlasheoPS3 #FlasheoPS4 #FlasheoPS5 #Walfedw"
     }
 ]
 
@@ -79,62 +56,32 @@ def guardar_historial(nuevos_items):
         print(f"Error guardando historial: {e}")
 
 def generar_guion(noticias):
-    texto_noticias = "\n".join([f"- {n['titulo']}: {n['resumen']}" for n in noticias[:10]])
+    texto_noticias = "\n".join([f"- {n['titulo']}" for n in noticias[:6]])
     historial_usados = cargar_historial()
-    string_historial = ", ".join(historial_usados[-30:]) if historial_usados else "Ninguno aún"
+    string_historial = ", ".join(historial_usados[-15:]) if historial_usados else "Ninguno aún"
 
     prompt = f"""
-    Eres la IA Creadora de Contenido Comercial del canal @walfedw.
-    Especialidad: SERVICIO TÉCNICO, FLASHEO, LIBERACIÓN, PARCHES 60 FPS Y CARGA DE JUEGOS PARA PLAYSTATION (PS3, PS4, PS5).
+    Eres el guionista viral de TikTok para @walfedw (Walfedw Services), especialista en flasheo y liberación de PS3, PS4 y PS5, carga de juegos y parches 60 FPS.
 
-    Novedades de la Scene:
+    Tendencias recientes:
     {texto_noticias}
 
-    HISTORIAL DE JUEGOS USADOS (PROHIBIDO REPETIR):
+    Temas ya usados anteriormente (NO REPETIR):
     {string_historial}
 
-    OBJETIVO: VENDER EL SERVICIO DE FLASHEO DE PS4 Y CAPTAR CLIENTES DIRECTOS.
+    TAREA: Escribe UN SOLO guion corto, directo y magnético de 35 a 45 palabras (13 a 16 segundos hablado) para vender el servicio de flasheo.
 
     REGLAS ESTRICTAS:
-    1. PROHIBIDO MOSTRAR O MENCIONAR NINTENDO SWITCH.
-    2. SI HABLAS DE PS4 EN EL VIDEO, EL CONTENIDO VISUAL Y HABLADO DEBE SER 100% DE PS4 (NADA DE CONSOLAS PS5 VISUALMENTE).
-    3. GANCHO DIRECTO A CLIENTES (Ej: "¿Tienes tu PS4 junta polvo? En Walfedw la liberamos hoy mismo").
-    4. CERO MENCION DE FIRMWARES ESPECÍFICOS O MANTENIMIENTO.
+    1. Empieza con un gancho potente en los primeros 3 segundos (Ej: "Esa PS4 ahí sentada puede hacer mucho más de lo que crees...", "¿Sigues pagando precios absurdos por cada juego?...").
+    2. Usa lenguaje natural, directo y persuasivo en español latino.
+    3. PROHIBIDO mencionar números de firmware (nada de 11.00, 9.00, 12.52) y PROHIBIDO mencionar Nintendo Switch o mantenimiento.
+    4. Cierra invitando a escribir al WhatsApp o Instagram de Walfedw para liberar su consola.
 
     FORMATO DE SALIDA EXACTO (JSON puro sin markdown):
     {{
-        "titulo_general": "FLASHEO Y JUEGOS PS4",
-        "gancho_titulo": "¿TIENES TU PS4 SIN FLASHEAR?",
-        "gancho_locucion": "¿Tienes tu PS4 guardada sin usar? En Walfedw la liberamos hoy mismo y te la entregamos llena de juegos.",
-        "escenas": [
-            {{
-                "item": "Juego Real 1",
-                "detalle": "Flasheo + Carga de catálogo",
-                "locucion": "En el número uno, [Juego 1]. Trae tu PS4 a Walfedw y te lo instalamos hoy.",
-                "busqueda_imagen": "Nombre juego ingles"
-            }},
-            {{
-                "item": "Juego Real 2",
-                "detalle": "Juega sin pagar de más",
-                "locucion": "Número dos, [Juego 2]. Disfrútalo en tu PS4 liberada con nuestro servicio.",
-                "busqueda_imagen": "Nombre juego ingles"
-            }},
-            {{
-                "item": "Juego Real 3",
-                "detalle": "Catálogo completo disponible",
-                "locucion": "Número tres, [Juego 3]. Escríbenos al privado para cotizar el flasheo de tu sistema.",
-                "busqueda_imagen": "Nombre juego ingles"
-            }},
-            {{
-                "item": "Servicio Flasheo PS4",
-                "detalle": "Juegos, parches 60 FPS y soluciones",
-                "locucion": "Y número cuatro, Servicio técnico de flasheo. Activa parches de 60 FPS y trucos en Walfedw.",
-                "busqueda_imagen": "playstation 4 dualshock controller"
-            }}
-        ],
-        "cierre_titulo": "¡FLASHEA TU PS4 HOY!",
-        "cierre_locucion": "¿Qué esperas para liberar tu PS4? Escríbenos al privado para cotizar y enviarte el catálogo.",
-        "hashtags": "#PS4Flasheada #FlasheoPS4 #JuegosPS4 #Walfedw"
+        "titulo_general": "Título corto del gancho",
+        "locucion_completa": "El texto corrido de 35 a 45 palabras que leerá el locutor con energía.",
+        "hashtags": "#PS4Flasheada #FlasheoPS4 #JuegosPS4 #PlayStation #Walfedw"
     }}
     """
 
@@ -146,60 +93,33 @@ def generar_guion(noticias):
 
     for intento in range(1, 4):
         try:
-            print(f"Intento {intento} solicitando guion a la IA...")
-            response = requests.post(url, json=payload, timeout=60)
+            print(f"Intento {intento} generando guion viral corto...")
+            response = requests.post(url, json=payload, timeout=45)
             if response.status_code == 200:
-                texto_respuesta = response.text.strip()
-                if "```json" in texto_respuesta:
-                    texto_respuesta = texto_respuesta.split("```json")[1].split("```")[0].strip()
-                elif "```" in texto_respuesta:
-                    texto_respuesta = texto_respuesta.split("```")[1].split("```")[0].strip()
+                texto = response.text.strip()
+                if "```json" in texto:
+                    texto = texto.split("```json")[1].split("```")[0].strip()
+                elif "```" in texto:
+                    texto = texto.split("```")[1].split("```")[0].strip()
 
-                datos = json.loads(texto_respuesta)
-                escenas_recibidas = datos.get("escenas", [])
-                
-                juegos_validos = True
-                for esc in escenas_recibidas:
-                    nombre = esc.get("item", "").lower()
-                    if "underworld" in nombre or "phantom" in nombre or "simucraft" in nombre or "nombre juego" in nombre:
-                        juegos_validos = False
-                        break
-                
-                if not juegos_validos or len(escenas_recibidas) < 3:
-                    print("Aplicando catálogo comercial verificado...")
-                    no_usados = [j for j in CATALOGO_JUEGOS_REALES if j["item"] not in historial_usados]
-                    if len(no_usados) < 4:
-                        no_usados = CATALOGO_JUEGOS_REALES
-                    datos["escenas"] = no_usados[:4]
-
-                nuevos = [e.get("item") for e in datos.get("escenas", []) if e.get("item")]
-                guardar_historial(nuevos)
-                return datos
+                datos = json.loads(texto)
+                loc = datos.get("locucion_completa", "").strip()
+                if len(loc.split()) >= 20:
+                    guardar_historial([datos.get("titulo_general", loc[:35])])
+                    return datos
         except Exception as e:
             print(f"Advertencia intento {intento}: {e}")
-            time.sleep(3)
+            time.sleep(2)
 
-    print("Usando catálogo de respaldo verificado...")
-    no_usados = [j for j in CATALOGO_JUEGOS_REALES if j["item"] not in historial_usados]
-    if len(no_usados) < 4:
-        no_usados = CATALOGO_JUEGOS_REALES
-    
-    escenas_seleccionadas = no_usados[:4]
-    guardar_historial([e["item"] for e in escenas_seleccionadas])
+    # Respaldo rotativo si la API tarda
+    disponibles = [g for g in GUIONES_VIRALES_BASE if g["tema"] not in historial_usados]
+    if not disponibles:
+        disponibles = GUIONES_VIRALES_BASE
+    elegido = random.choice(disponibles)
+    guardar_historial([elegido["tema"]])
 
     return {
-        "titulo_general": "FLASHEO Y JUEGOS PS4",
-        "gancho_titulo": "¿TIENES TU PS4 SIN FLASHEAR?",
-        "gancho_locucion": "¿Tienes tu PS4 guardada sin usar? En Walfedw la liberamos hoy mismo y te la entregamos llena de juegos.",
-        "escenas": escenas_seleccionadas,
-        "cierre_titulo": "¡FLASHEA TU PS4 HOY!",
-        "cierre_locucion": "¿Qué esperas para liberar tu PS4? Escríbenos al privado para cotizar y enviarte el catálogo.",
-        "hashtags": "#PS4Flasheada #FlasheoPS4 #JuegosPS4 #Walfedw"
+        "titulo_general": elegido["tema"],
+        "locucion_completa": elegido["locucion"],
+        "hashtags": elegido["hashtags"]
     }
-
-if __name__ == "__main__":
-    from rss_reader import obtener_noticias
-    noticias_prueba = obtener_noticias()
-    if noticias_prueba:
-        resultado = generar_guion(noticias_prueba)
-        print(resultado)
