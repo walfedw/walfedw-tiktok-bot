@@ -25,7 +25,7 @@ from moviepy.editor import (
 VOCES = ["es-MX-JorgeNeural", "es-MX-DarianNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
-# Mapa verificado de AppIDs de Steam para descargar pósteres verticales HD (600x900 2x)
+# Mapa de AppIDs para descargar clips de GAMEPLAY REAL (.mp4) y pósteres HD
 STEAM_APP_IDS = {
     "god of war ragnarok": "2322010",
     "god of war": "1593500",
@@ -47,13 +47,6 @@ STEAM_APP_IDS = {
     "mortal kombat 1": "1971870",
     "detroit become human": "1222140"
 }
-
-# Fotos verticales HD de mandos DualShock 4 / PlayStation (1080x1920 nativo)
-FOTOS_CONSOLA_HD = [
-    "https://images.unsplash.com/photo-1507457379470-08b800bebc67?w=1080&h=1920&q=90&fit=crop",
-    "https://images.unsplash.com/photo-1592840496694-26d035b52b48?w=1080&h=1920&q=90&fit=crop",
-    "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=1080&h=1920&q=90&fit=crop"
-]
 
 def limpiar_texto(texto):
     return re.sub(r'[^\w\s.,¡!¿?áéíóúÁÉÍÓÚñÑ\-]', '', texto).strip()
@@ -87,81 +80,108 @@ async def generar_audio_con_tiempos(texto, archivo_salida):
             print(f"Advertencia con voz {voz}: {e}")
     raise RuntimeError("No se pudo generar el audio de locución.")
 
-def descargar_poster_vertical_hd(nombre_juego, idx):
-    """Descarga el póster vertical oficial 600x900 2x de Steam CDN (cero pixelación)."""
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+def buscar_app_id(nombre_juego):
     clave = nombre_juego.lower().strip()
-    app_id = STEAM_APP_IDS.get(clave)
-
-    if not app_id:
-        for k, v in STEAM_APP_IDS.items():
-            if k in clave or clave in k:
-                app_id = v
-                break
-
-    if not app_id:
-        try:
-            url_api = f"https://store.steampowered.com/api/storesearch/?term={requests.utils.quote(nombre_juego)}&l=english&cc=US"
-            r = requests.get(url_api, headers=headers, timeout=8)
-            if r.status_code == 200 and r.json().get("items"):
-                app_id = str(r.json()["items"][0]["id"])
-        except Exception:
-            pass
-
-    if app_id:
-        urls_poster = [
-            f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_600x900_2x.jpg",
-            f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_600x900.jpg"
-        ]
-        for url_p in urls_poster:
-            try:
-                res = requests.get(url_p, headers=headers, timeout=12)
-                if res.status_code == 200 and len(res.content) > 15000:
-                    ruta = f"temp_poster_{idx}.jpg"
-                    with open(ruta, "wb") as f:
-                        f.write(res.content)
-                    print(f"[Póster Vertical HD] Descargado: {nombre_juego}")
-                    return ruta
-            except Exception:
-                continue
+    if clave in STEAM_APP_IDS:
+        return STEAM_APP_IDS[clave]
+    for k, v in STEAM_APP_IDS.items():
+        if k in clave or clave in k:
+            return v
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        url_api = f"https://store.steampowered.com/api/storesearch/?term={requests.utils.quote(nombre_juego)}&l=english&cc=US"
+        r = requests.get(url_api, headers=headers, timeout=8)
+        if r.status_code == 200 and r.json().get("items"):
+            return str(r.json()["items"][0]["id"])
+    except Exception:
+        pass
     return None
 
-def obtener_recursos_visuales(juegos_solicitados):
-    """Combina clips locales de clips/ con pósteres verticales HD de los juegos del guion."""
-    extensiones = ("clips/*.mp4", "clips/*.MP4", "clips/*.mov", "clips/*.MOV", "clips/*.jpg", "clips/*.png")
-    archivos_locales = []
-    for ext in extensiones:
-        archivos_locales.extend(glob.glob(ext))
-    archivos_locales = sorted(archivos_locales)
+def descargar_gameplay_mp4(nombre_juego, idx):
+    """Descarga un video .mp4 real de gameplay oficial del juego."""
+    app_id = buscar_app_id(nombre_juego)
+    if not app_id:
+        return None
 
-    if len(archivos_locales) >= 4:
-        print(f"Usando {len(archivos_locales)} clips reales de la carpeta clips/.")
-        return archivos_locales
-
-    recursos = list(archivos_locales)
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    # Descargar 1 foto HD de consola/mando PlayStation para el gancho inicial
-    foto_consola = random.choice(FOTOS_CONSOLA_HD)
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     try:
-        r_con = requests.get(foto_consola, headers=headers, timeout=12)
-        if r_con.status_code == 200 and len(r_con.content) > 15000:
-            with open("temp_consola_hd.jpg", "wb") as f:
-                f.write(r_con.content)
-            recursos.append("temp_consola_hd.jpg")
+        url_details = f"https://store.steampowered.com/api/appdetails?appids={app_id}&cc=US&l=english"
+        res = requests.get(url_details, headers=headers, timeout=10)
+        if res.status_code != 200:
+            return None
+
+        data = res.json().get(str(app_id), {}).get("data", {})
+        movies = data.get("movies", [])
+        if not movies:
+            return None
+
+        # Elegir un tráiler aleatorio si el juego tiene varios
+        trailer = random.choice(movies[:3])
+        mp4_urls = trailer.get("mp4", {})
+        video_url = mp4_urls.get("480") or mp4_urls.get("max")
+        if not video_url:
+            return None
+
+        ruta_mp4 = f"temp_gameplay_{idx}.mp4"
+        with requests.get(video_url, headers=headers, stream=True, timeout=20) as r_vid:
+            if r_vid.status_code == 200:
+                bytes_descargados = 0
+                limite_bytes = 22 * 1024 * 1024  # Tope 22 MB para descarga veloz
+                with open(ruta_mp4, "wb") as f:
+                    for chunk in r_vid.iter_content(chunk_size=1024 * 256):
+                        if chunk:
+                            f.write(chunk)
+                            bytes_descargados += len(chunk)
+                            if bytes_descargados >= limite_bytes:
+                                break
+                if os.path.exists(ruta_mp4) and os.path.getsize(ruta_mp4) > 150000:
+                    print(f"[Gameplay Real MP4] Descargado: {nombre_juego}")
+                    return ruta_mp4
+    except Exception as e:
+        print(f"Advertencia descargando gameplay de {nombre_juego}: {e}")
+
+    # Si ese juego no tuviera tráiler MP4, descargar su póster vertical HD 600x900
+    try:
+        url_poster = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_600x900_2x.jpg"
+        r_img = requests.get(url_poster, headers=headers, timeout=10)
+        if r_img.status_code == 200 and len(r_img.content) > 15000:
+            ruta_jpg = f"temp_poster_{idx}.jpg"
+            with open(ruta_jpg, "wb") as f:
+                f.write(r_img.content)
+            return ruta_jpg
     except Exception:
         pass
 
-    # Descargar los pósteres verticales 600x900 HD de los juegos específicos de este video
-    for idx, juego in enumerate(juegos_solicitados):
-        ruta_poster = descargar_poster_vertical_hd(juego, idx)
-        if ruta_poster:
-            recursos.append(ruta_poster)
+    return None
 
-    return recursos
+def obtener_recursos_visuales(juegos_solicitados):
+    """Intercala tus clips reales de GoldHEN/consola (clips/) con gameplays MP4 descargados."""
+    extensiones = ("clips/*.mp4", "clips/*.MP4", "clips/*.mov", "clips/*.MOV", "clips/*.jpg", "clips/*.png")
+    clips_taller = []
+    for ext in extensiones:
+        clips_taller.extend(glob.glob(ext))
+    random.shuffle(clips_taller)
+
+    gameplays_descargados = []
+    for idx, juego in enumerate(juegos_solicitados):
+        recurso = descargar_gameplay_mp4(juego, idx)
+        if recurso:
+            gameplays_descargados.append(recurso)
+
+    # Intercalar: [Clip GoldHEN/Consola, Gameplay 1, Clip GoldHEN/Consola, Gameplay 2...]
+    mezcla = []
+    max_len = max(len(clips_taller), len(gameplays_descargados))
+    for i in range(max_len):
+        if i < len(clips_taller):
+            mezcla.append(clips_taller[i])
+        if i < len(gameplays_descargados):
+            mezcla.append(gameplays_descargados[i])
+
+    print(f"Recursos listos: {len(clips_taller)} clips locales + {len(gameplays_descargados)} gameplays HD.")
+    return mezcla
 
 def ajustar_a_vertical_hd(clip, target_w=720, target_h=1280):
-    """Escala y recorta a 720x1280 manteniendo proporción exacta y nitidez."""
+    """Escala y recorta a 720x1280 en pantalla completa sin bordes negros."""
     w, h = clip.size
     if (w / h) > (target_w / target_h):
         clip = clip.resize(height=target_h)
@@ -170,7 +190,7 @@ def ajustar_a_vertical_hd(clip, target_w=720, target_h=1280):
     return clip.crop(x_center=clip.w / 2, y_center=clip.h / 2, width=target_w, height=target_h)
 
 def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
-    """Arma cortes rápidos dinámicos cada ~2.2 segundos."""
+    """Arma cortes rápidos dinámicos cada ~2.0 segundos entrando directo en la acción."""
     secuencia = []
     tiempo_acumulado = 0.0
     clips_abiertos = []
@@ -187,7 +207,7 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
     while tiempo_acumulado < duracion_objetivo and errores < len(pool) * 2:
         ruta = pool[indice % len(pool)]
         indice += 1
-        dur_corte = min(random.uniform(2.0, 2.5), duracion_objetivo - tiempo_acumulado)
+        dur_corte = min(random.uniform(1.8, 2.3), duracion_objetivo - tiempo_acumulado)
         if dur_corte <= 0.15:
             break
 
@@ -195,14 +215,17 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
             if ruta.lower().endswith((".jpg", ".jpeg", ".png")):
                 base = ImageClip(ruta).set_duration(dur_corte)
                 base = ajustar_a_vertical_hd(base, 720, 1280)
-                # Zoom cinematográfico suave sobre el póster vertical HD
                 sub = base.resize(lambda t, d=dur_corte: 1.0 + 0.05 * (t / max(0.1, d))).set_position(("center", "center"))
                 clips_abiertos.append(base)
             else:
                 v = VideoFileClip(ruta).without_audio()
                 clips_abiertos.append(v)
-                max_start = max(0.0, v.duration - dur_corte - 0.1)
-                start_t = random.uniform(0.0, max_start) if max_start > 0 else 0.0
+
+                # Si es un tráiler largo (>16s), saltar los primeros 11s para evitar logos de clasificación
+                min_start = 11.0 if v.duration > 16.0 else 0.0
+                max_start = max(min_start, v.duration - dur_corte - 0.2)
+                start_t = random.uniform(min_start, max_start) if max_start > min_start else min_start
+
                 sub = v.subclip(start_t, min(v.duration, start_t + dur_corte))
                 sub = ajustar_a_vertical_hd(sub, 720, 1280)
 
@@ -222,7 +245,7 @@ def construir_fondo_dinamico(duracion_objetivo, lista_recursos):
     return video_concat.subclip(0, min(duracion_objetivo, video_concat.duration)), clips_abiertos
 
 def renderizar_frame_subtitulo(palabras_grupo, indice_activo, idx_frame):
-    """Subtítulos virales con caja rosa neón saltarina sobre palabra activa."""
+    """Subtítulos virales estilo CapCut con caja rosa neón sobre palabra activa."""
     ancho, alto = 720, 220
     img = Image.new("RGBA", (ancho, alto), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -304,7 +327,7 @@ def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
     return clips_subs, archivos_temp
 
 def generar_flyer_profesional_hd(salida_png="temp_flyer_pro.png"):
-    """Renderiza una tarjeta de cierre HD de nivel estudio para WALFEDW SERVICES (sin Switch)."""
+    """Renderiza tarjeta HD final de WALFEDW SERVICES (PS3 • PS4 • PS5)."""
     avatar_tag = ""
     if os.path.exists("walfedw.jpg"):
         try:
@@ -429,10 +452,8 @@ def generar_flyer_profesional_hd(salida_png="temp_flyer_pro.png"):
         return None
 
 def obtener_clip_flyer_cierre(duracion_flyer=2.8):
-    """Usa flyer.jpg si fue subido; de lo contrario genera el flyer HD oficial sin Switch."""
     for candidato in ["flyer.jpg", "flyer.png", "walfedw_flyer.jpg"]:
         if os.path.exists(candidato):
-            print(f"Integrando flyer oficial subido: {candidato}")
             clip_img = ImageClip(candidato).set_duration(duracion_flyer)
             clip_img = ajustar_a_vertical_hd(clip_img, 720, 1280)
             return clip_img.resize(lambda t: 1.04 - 0.04 * (t / duracion_flyer)).set_position(("center", "center"))
@@ -470,13 +491,13 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
         ["God of War Ragnarok", "Marvels Spider-Man Remastered", "Red Dead Redemption 2", "Ghost of Tsushima"]
     )
 
-    print("1. Generando locución con sincronización exacta palabra por palabra...")
+    print("1. Generando locución con sincronización palabra por palabra...")
     audio_voz_path = "temp_voz_viral.mp3"
     tiempos_palabras = asyncio.run(generar_audio_con_tiempos(locucion, audio_voz_path))
     audio_voz = AudioFileClip(audio_voz_path)
     duracion_voz = audio_voz.duration
 
-    print("2. Descargando pósteres verticales HD (600x900 2x)...")
+    print("2. Descargando clips de gameplay real (.mp4) y preparando cortes rápidos...")
     lista_recursos = obtener_recursos_visuales(juegos_visuales)
     video_broll, clips_abiertos = construir_fondo_dinamico(duracion_voz, lista_recursos)
 
@@ -522,10 +543,12 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
         except:
             pass
 
-    temporales = [
-        audio_voz_path, "temp_bg_black.png", "temp_flyer_fallback.png",
-        "temp_flyer_pro.png", "temp_consola_hd.jpg"
-    ] + archivos_subs_temp + glob.glob("temp_poster_*.jpg")
+    temporales = (
+        [audio_voz_path, "temp_bg_black.png", "temp_flyer_fallback.png", "temp_flyer_pro.png"]
+        + archivos_subs_temp
+        + glob.glob("temp_poster_*.jpg")
+        + glob.glob("temp_gameplay_*.mp4")
+    )
 
     for f in temporales:
         if os.path.exists(f):
