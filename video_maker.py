@@ -24,31 +24,11 @@ from moviepy.editor import (
 VOCES = ["es-MX-JorgeNeural", "es-MX-DarianNeural", "es-ES-AlvaroNeural"]
 URL_BGM_GAMING = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3"
 
-STEAM_APP_IDS = {
-    "god of war ragnarok": "2322010",
-    "god of war": "1593500",
-    "marvels spider-man 2": "2651280",
-    "marvels spider-man remastered": "1817070",
-    "red dead redemption 2": "1174180",
-    "grand theft auto v": "271590",
-    "ghost of tsushima": "2215430",
-    "the last of us part i": "1888930",
-    "uncharted legacy of thieves": "1659420",
-    "days gone": "1259420",
-    "horizon forbidden west": "2420110",
-    "cyberpunk 2077": "1091500",
-    "elden ring": "1245620",
-    "resident evil 4": "2050650",
-    "silent hill 2": "2124490",
-    "dragon ball sparking zero": "1790600",
-    "mortal kombat 1": "1971870"
-}
-
 def limpiar_texto(texto):
     return re.sub(r'[^\w\s.,¡!¿?áéíóúÁÉÍÓÚñÑ\-]', '', texto).strip()
 
 async def generar_audio_con_tiempos(texto, archivo_salida):
-    """Genera locución natural y captura el tiempo exacto de cada palabra."""
+    """Genera locución natural y captura el timestamp exacto de cada palabra."""
     texto_limpio = limpiar_texto(texto)
     voces_rotadas = list(VOCES)
     random.shuffle(voces_rotadas)
@@ -96,6 +76,21 @@ def buscar_clips_locales():
 
     return encontrados
 
+def buscar_app_id_dinamico(nombre_juego):
+    """Consulta la API de búsqueda de Steam en vivo para encontrar CUALQUIER juego que elija la IA."""
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    limpio = re.sub(r'[^\w\s\-:]', '', nombre_juego).strip()
+    try:
+        url = f"https://store.steampowered.com/api/storesearch/?term={requests.utils.quote(limpio)}&l=english&cc=US"
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code == 200:
+            items = res.json().get("items", [])
+            if items:
+                return str(items[0]["id"])
+    except Exception as e:
+        print(f"Error buscando AppID dinámico para {nombre_juego}: {e}")
+    return None
+
 def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=24, duracion=8):
     """Extrae un tramo de puro gameplay en vertical 720x1280 sin audio."""
     cmd = [
@@ -119,26 +114,16 @@ def extraer_clip_con_ffmpeg(url_stream, ruta_salida, segundo_inicio=24, duracion
         print(f"FFmpeg timeout/error con stream: {e}")
     return False
 
-def descargar_gameplay_real_steam(juegos_solicitados, max_clips=6):
-    """Extrae hasta 6 clips de gameplay real entrando desde el segundo 22 al 42."""
+def descargar_gameplay_dinamico(juegos_solicitados, max_clips=6):
+    """Busca y descarga gameplays reales para los juegos exactos elegidos por la IA."""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     cookies_edad = {"birthtime": "568022401", "lastagecheckage": "1-0-1988", "mature_content": "1"}
     clips_listos = []
 
-    extras = [k for k in STEAM_APP_IDS.keys() if k not in [j.lower() for j in juegos_solicitados]]
-    random.shuffle(extras)
-    pool_juegos = list(juegos_solicitados) + extras[:4]
-
-    for idx, juego in enumerate(pool_juegos):
+    for idx, juego in enumerate(juegos_solicitados):
         if len(clips_listos) >= max_clips:
             break
-        clave = juego.lower().strip()
-        app_id = STEAM_APP_IDS.get(clave)
-        if not app_id:
-            for k, v in STEAM_APP_IDS.items():
-                if k in clave or clave in k:
-                    app_id = v
-                    break
+        app_id = buscar_app_id_dinamico(juego)
         if not app_id:
             continue
 
@@ -152,65 +137,99 @@ def descargar_gameplay_real_steam(juegos_solicitados, max_clips=6):
             if not movies:
                 continue
 
-            trailer = movies[1] if len(movies) > 1 else movies[0]
-            stream_url = (
-                trailer.get("mp4", {}).get("480")
-                or trailer.get("webm", {}).get("480")
-                or trailer.get("webm", {}).get("max")
-                or trailer.get("hls_h264")
-            )
-            if not stream_url:
-                continue
+            # Extraer hasta 2 cortes distintos si el juego tiene varios tráilers
+            trailers_elegidos = movies[:2] if len(juegos_solicitados) <= 3 else [movies[1] if len(movies) > 1 else movies[0]]
+            for t_idx, trailer in enumerate(trailers_elegidos):
+                if len(clips_listos) >= max_clips:
+                    break
+                stream_url = (
+                    trailer.get("mp4", {}).get("480")
+                    or trailer.get("webm", {}).get("480")
+                    or trailer.get("webm", {}).get("max")
+                    or trailer.get("hls_h264")
+                )
+                if not stream_url:
+                    continue
 
-            ruta_mp4 = f"temp_gp_{idx}.mp4"
-            inicio_accion = random.randint(22, 42)
-            print(f"Extrayendo gameplay en acción de {juego} (desde {inicio_accion}s)...")
-            if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio_accion, duracion=8):
-                print(f"[OK Gameplay MP4] {juego}")
-                clips_listos.append(ruta_mp4)
+                ruta_mp4 = f"temp_gp_{idx}_{t_idx}.mp4"
+                inicio_accion = random.randint(20, 40)
+                print(f"Extrayendo gameplay dinámico de '{juego}' (desde {inicio_accion}s)...")
+                if extraer_clip_con_ffmpeg(stream_url, ruta_mp4, segundo_inicio=inicio_accion, duracion=8):
+                    print(f"[OK Gameplay Dinámico] {juego}")
+                    clips_listos.append(ruta_mp4)
         except Exception as e:
-            print(f"Advertencia obteniendo stream de {juego}: {e}")
+            print(f"Advertencia stream {juego}: {e}")
 
     return clips_listos
 
-def descargar_fotos_ultimo_recurso(juegos_solicitados):
-    headers = {"User-Agent": "Mozilla/5.0"}
-    fotos = []
-    for idx, juego in enumerate(juegos_solicitados[:4]):
-        clave = juego.lower().strip()
-        app_id = STEAM_APP_IDS.get(clave, "2322010")
-        url_p = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_600x900_2x.jpg"
+def descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3):
+    """Busca clips de gameplay en comunidades de PS5/PS4 para exclusivos de consola (ej. Astro Bot, Gran Turismo 7)."""
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; WalfedwDynamicFinder/2.0)"}
+    clips = []
+
+    for idx, juego in enumerate(juegos_solicitados):
+        if len(clips) >= max_clips:
+            break
+        q = requests.utils.quote(f"{juego} gameplay")
+        url = f"https://www.reddit.com/search.json?q={q}&sort=top&t=year&limit=12"
         try:
-            r = requests.get(url_p, headers=headers, timeout=10)
-            if r.status_code == 200 and len(r.content) > 15000:
-                ruta = f"temp_fallback_poster_{idx}.jpg"
-                with open(ruta, "wb") as f:
-                    f.write(r.content)
-                fotos.append(ruta)
+            res = requests.get(url, headers=headers, timeout=10)
+            if res.status_code != 200:
+                continue
+            for post in res.json().get("data", {}).get("children", []):
+                pdata = post.get("data", {})
+                if pdata.get("over_18"):
+                    continue
+                media = pdata.get("secure_media") or pdata.get("media")
+                if media and isinstance(media, dict) and "reddit_video" in media:
+                    rv = media["reddit_video"]
+                    v_url = rv.get("fallback_url")
+                    if v_url and 4 <= rv.get("duration", 0) <= 90:
+                        ruta_out = f"temp_comm_{idx}.mp4"
+                        if extraer_clip_con_ffmpeg(v_url, ruta_out, segundo_inicio=2, duracion=7):
+                            print(f"[OK Clip Comunidad] {juego}")
+                            clips.append(ruta_out)
+                            break
         except Exception:
-            pass
-    return fotos
+            continue
+
+    return clips
 
 def obtener_recursos_visuales(juegos_solicitados):
-    """Combina 6+ gameplays en acción con tus clips locales."""
+    """Combina gameplays dinámicos de los juegos del guion + clips de comunidad + tus clips locales."""
     clips_locales = buscar_clips_locales()
-    clips_steam = descargar_gameplay_real_steam(juegos_solicitados, max_clips=6)
+    clips_steam = descargar_gameplay_dinamico(juegos_solicitados, max_clips=5)
+    clips_comm = descargar_clips_comunidad_por_juego(juegos_solicitados, max_clips=3) if len(clips_steam) < 4 else []
 
-    if clips_steam:
-        mezcla = []
-        if len(clips_locales) >= 1:
-            mezcla.append(clips_locales[0])
-        mezcla.extend(clips_steam[:3])
-        if len(clips_locales) >= 2:
-            mezcla.append(clips_locales[1])
-        mezcla.extend(clips_steam[3:])
-        print(f"Secuencia armada con {len(mezcla)} clips reales ({len(clips_steam)} gameplays + {len(clips_locales)} consola).")
+    gameplays = clips_steam + clips_comm
+    mezcla = []
+    if len(clips_locales) >= 1:
+        mezcla.append(clips_locales[0])
+    mezcla.extend(gameplays[:3])
+    if len(clips_locales) >= 2:
+        mezcla.append(clips_locales[1])
+    mezcla.extend(gameplays[3:])
+
+    if mezcla:
+        print(f"Recursos dinámicos listos: {len(gameplays)} gameplays reales + {len(clips_locales)} clips locales.")
         return mezcla
 
-    if clips_locales:
-        return clips_locales
-
-    return descargar_fotos_ultimo_recurso(juegos_solicitados)
+    # Último recurso: pósteres verticales dinámicos de los juegos elegidos
+    fotos = []
+    for idx, juego in enumerate(juegos_solicitados[:4]):
+        app_id = buscar_app_id_dinamico(juego)
+        if app_id:
+            url_p = f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/library_600x900_2x.jpg"
+            try:
+                r = requests.get(url_p, timeout=10)
+                if r.status_code == 200 and len(r.content) > 15000:
+                    ruta = f"temp_fallback_poster_{idx}.jpg"
+                    with open(ruta, "wb") as f:
+                        f.write(r.content)
+                    fotos.append(ruta)
+            except Exception:
+                pass
+    return fotos
 
 def ajustar_a_vertical_hd(clip, target_w=720, target_h=1280):
     w, h = clip.size
@@ -387,12 +406,11 @@ def crear_subtitulos_capcut(tiempos_palabras, texto_completo, duracion_total):
     return clips_subs, archivos_temp
 
 def obtener_clip_flyer_cierre(duracion_flyer=4.0):
-    """Encuadra tu flyer.png de GitHub SIN recortarlo dentro de una tarjeta vertical HD con tus datos."""
+    """Encuadra tu flyer.png de GitHub completo sin recortarlo dentro de la tarjeta vertical HD."""
     canvas_w, canvas_h = 720, 1280
     lienzo = Image.new("RGB", (canvas_w, canvas_h), (8, 12, 26))
     draw = ImageDraw.Draw(lienzo)
 
-    # Fondo degradado azul/morado neón sutil
     for y in range(canvas_h):
         r = int(12 + 18 * (1 - abs(y - 640) / 640))
         g = int(16 + 24 * (1 - abs(y - 640) / 640))
@@ -408,12 +426,10 @@ def obtener_clip_flyer_cierre(duracion_flyer=4.0):
     except:
         f_title = f_sub = f_cta = f_wa = f_ig = ImageFont.load_default()
 
-    # Encabezado superior
     draw.text((360, 105), "WALFEDW SERVICES", fill=(255, 255, 255), anchor="mm", font=f_title)
     draw.rounded_rectangle([95, 148, 625, 198], radius=16, fill=(0, 210, 255))
     draw.text((360, 173), "FLASHEO E INSTALACIÓN DE JUEGOS", fill=(5, 10, 20), anchor="mm", font=f_cta)
 
-    # Insertar tu flyer.png (o flyer.jpg / walfedw.jpg) completo sin recortar nada
     ruta_flyer = None
     for candidato in ["flyer.png", "flyer.jpg", "walfedw.jpg"]:
         if os.path.exists(candidato):
@@ -425,7 +441,6 @@ def obtener_clip_flyer_cierre(duracion_flyer=4.0):
         print(f"Integrando tu imagen oficial completa de GitHub: {ruta_flyer}")
         foto = Image.open(ruta_flyer).convert("RGB")
         fw, fh = foto.size
-        # Ajustar proporcionalmente al ancho 672px manteniendo toda la imagen visible
         nuevo_w = 672
         nuevo_h = int(fh * (nuevo_w / fw))
         if nuevo_h > 540:
@@ -438,7 +453,6 @@ def obtener_clip_flyer_cierre(duracion_flyer=4.0):
         x_pos = (canvas_w - nuevo_w) // 2
         y_pos = 235
 
-        # Marco neón brillante alrededor de tu flyer
         draw.rounded_rectangle(
             [x_pos - 6, y_pos - 6, x_pos + nuevo_w + 6, y_pos + nuevo_h + 6],
             radius=22,
@@ -448,13 +462,11 @@ def obtener_clip_flyer_cierre(duracion_flyer=4.0):
         lienzo.paste(foto_resized, (x_pos, y_pos))
         y_fin_imagen = y_pos + nuevo_h + 32
 
-    # Bloque comercial debajo de tu foto
     draw.rounded_rectangle([45, y_fin_imagen, 675, y_fin_imagen + 135], radius=22, fill=(15, 25, 48), outline=(255, 230, 0), width=3)
     draw.text((360, y_fin_imagen + 36), "• CONSULTA LA VERSIÓN DE TU CONSOLA", fill=(255, 230, 0), anchor="mm", font=f_cta)
     draw.text((360, y_fin_imagen + 76), "• DIME QUÉ JUEGOS TE GUSTAN", fill=(255, 255, 255), anchor="mm", font=f_cta)
     draw.text((360, y_fin_imagen + 112), "PS3 • PS4 • PS5 • 100% SEGURO", fill=(0, 220, 255), anchor="mm", font=f_sub)
 
-    # Tarjeta blanca de contacto directo
     y_contacto = y_fin_imagen + 160
     draw.rounded_rectangle([45, y_contacto, 675, y_contacto + 175], radius=24, fill=(255, 255, 255))
     draw.text((360, y_contacto + 32), "ESCRÍBENOS AL WHATSAPP", fill=(22, 163, 74), anchor="mm", font=f_cta)
@@ -484,11 +496,11 @@ def descargar_musica_fondo():
 def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
     locucion = datos_guion.get(
         "locucion_completa",
-        "¿Ya te enteraste de las últimas novedades para flashear tu PlayStation? En Walfedw Services yo me encargo de flashear tu consola e instalarte los mejores títulos. Consulta tu versión y dime qué juegos te gustan."
+        "¿Ya te enteraste de las últimas novedades en PlayStation? En Walfedw Services yo me encargo de flashear tu consola e instalarte los mejores títulos. Consulta tu versión y dime qué juegos te gustan."
     )
     juegos_visuales = datos_guion.get(
         "juegos_visuales",
-        ["God of War Ragnarok", "Marvels Spider-Man 2", "Red Dead Redemption 2", "Ghost of Tsushima"]
+        ["Black Myth Wukong", "Tekken 8", "Gran Turismo 7", "Bloodborne"]
     )
 
     print("1. Generando locución completa y tiempos de subtítulos...")
@@ -498,7 +510,7 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
 
     duracion_escena_principal = max(27.0, audio_voz.duration + 0.6)
 
-    print("2. Extrayendo 6+ gameplays en acción...")
+    print("2. Buscando y extrayendo gameplays dinámicos para:", juegos_visuales)
     lista_recursos = obtener_recursos_visuales(juegos_visuales)
     video_broll, clips_abiertos = construir_fondo_dinamico(duracion_escena_principal, lista_recursos)
 
@@ -552,6 +564,7 @@ def crear_video(datos_guion, archivo_salida="noticia_tiktok.mp4"):
         [audio_voz_path, "temp_bg_black.png", "temp_flyer_github_card.png", ruta_marca_png]
         + archivos_subs_temp
         + glob.glob("temp_gp_*.mp4")
+        + glob.glob("temp_comm_*.mp4")
         + glob.glob("temp_fallback_poster_*.jpg")
     )
 
